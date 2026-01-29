@@ -189,7 +189,6 @@
             .btn { padding: 16px; font-size: 1.1em; }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
 </head>
 <body>
 
@@ -255,10 +254,21 @@
 
     <script>
         // Конфигурация Supabase (ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ)
-        const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W';
+        const SUPABASE_URL = 'https://zfxlqshwrhkvyhjwbtja.supabase.co'; // Ваш URL
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmeGxxc2h3cmhrdnlhandidGphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0ODk2MDcsImV4cCI6MjA1NDA2NTYwN30.e0CQgJV6S3QZ0l-zC8gUR_cj2pSnzw0r55bNes9eSq0'; // Ваш anon key
 
         let currentTab = 'login';
+
+        // Функция для создания простого хеша (SHA-256)
+        async function hashPassword(password) {
+            // Простая хеш-функция для MVP (в продакшене используйте bcrypt)
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
 
         function switchTab(tab) {
             currentTab = tab;
@@ -313,7 +323,7 @@
 
             try {
                 // Хешируем пароль
-                const hash = bcrypt.hashSync(password, 10);
+                const hash = await hashPassword(password);
                 
                 // Рассчитываем следующую дату выплаты (через 30 дней)
                 const nextPaymentDate = new Date();
@@ -410,10 +420,10 @@
 
                 const user = users[0];
                 
-                // Проверяем пароль
-                const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+                // Хешируем введенный пароль и сравниваем
+                const hashedPassword = await hashPassword(password);
                 
-                if (!isPasswordValid) {
+                if (hashedPassword !== user.password_hash) {
                     showMessage('Неверный пароль', 'error');
                     return;
                 }
