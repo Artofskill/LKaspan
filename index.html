@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artofskill — Вход и Регистрация</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --accent2: #ffa657;
+            --green: #56d364;
+            --red: #ff7b72;
+            --border: #30363d;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            animation: fadeIn 0.8s ease-out;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 3em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--accent2);
+            opacity: 0.9;
+        }
+        .auth-box {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 40px 35px;
+            border: 2px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 5px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: transparent;
+            color: var(--text);
+        }
+        .tab.active {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(88,166,255,0.3);
+        }
+        .form-container {
+            position: relative;
+            min-height: 350px;
+        }
+        .form {
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+        .form.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
+        .input-group {
+            margin-bottom: 25px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88,166,255,0.1);
+        }
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(90deg, var(--accent), #79c0ff);
+            color: #000;
+            font-weight: bold;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(88,166,255,0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .message {
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+        .success {
+            background: rgba(86,211,100,0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+        .error {
+            background: rgba(255,123,114,0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(88,166,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        @media (max-width: 480px) {
+            .container { padding: 0; }
+            .auth-box { padding: 30px 25px; }
+            h1 { font-size: 2.4em; }
+            .subtitle { font-size: 1.1em; }
+            .btn { padding: 16px; font-size: 1.1em; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Artofskill</h1>
+            <div class="subtitle">Funding + Spread Arbitrage Terminal</div>
+        </div>
+
+        <div class="auth-box">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Вход</button>
+                <button class="tab" onclick="switchTab('register')">Регистрация</button>
+            </div>
+
+            <div class="form-container">
+                <!-- Форма входа -->
+                <div class="form active" id="login-form">
+                    <div class="input-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password">Пароль</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn" onclick="login()">Войти в систему</button>
+                </div>
+
+                <!-- Форма регистрации -->
+                <div class="form" id="register-form">
+                    <div class="input-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-username">Имя пользователя</label>
+                        <input type="text" id="reg-username" placeholder="Username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-password">Пароль</label>
+                        <input type="password" id="reg-password" placeholder="••••••••" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-password-confirm">Подтвердите пароль</label>
+                        <input type="password" id="reg-password-confirm" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn" onclick="register()">Создать аккаунт</button>
+                </div>
+            </div>
+
+            <div class="message" id="message"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div style="margin-top: 10px;">Обработка...</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #8b949e; font-size: 0.9em;">
+            © 2025 Artofskill — Все инструменты в одном месте
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация Supabase (ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ)
+        const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W';
+
+        let currentTab = 'login';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Обновляем активные кнопки
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+            
+            // Активируем выбранную вкладку
+            document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+            document.getElementById(`${tab}-form`).classList.add('active');
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+            
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        async function register() {
+            const email = document.getElementById('reg-email').value.trim();
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-password-confirm').value;
+
+            // Валидация
+            if (!email || !username || !password || !confirmPassword) {
+                showMessage('Все поля обязательны для заполнения', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage('Пароли не совпадают', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('Пароль должен содержать минимум 6 символов', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                // Хешируем пароль
+                const hash = bcrypt.hashSync(password, 10);
+                
+                // Рассчитываем следующую дату выплаты (через 30 дней)
+                const nextPaymentDate = new Date();
+                nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
+                const formattedDate = nextPaymentDate.toISOString().split('T')[0];
+
+                // Отправляем данные в Supabase
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password_hash: hash,
+                        username: username,
+                        registration_date: new Date().toISOString(),
+                        next_payment_date: formattedDate,
+                        total_investment: 0,
+                        wallet_address: '',
+                        status: 'active',
+                        role: 'user'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+
+                const userData = await response.json();
+                
+                showMessage('Регистрация успешна! Перенаправляем...', 'success');
+                
+                // Сохраняем данные пользователя
+                localStorage.setItem('user_id', userData[0].id);
+                localStorage.setItem('user_email', email);
+                localStorage.setItem('username', username);
+                localStorage.setItem('user_role', 'user');
+                
+                // Перенаправляем в личный кабинет через 1.5 секунды
+                setTimeout(() => {
+                    window.location.href = 'account.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Registration error:', error);
+                if (error.message.includes('duplicate key')) {
+                    showMessage('Пользователь с таким email уже существует', 'error');
+                } else {
+                    showMessage('Ошибка при регистрации. Попробуйте позже', 'error');
+                }
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showMessage('Заполните все поля', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                // Ищем пользователя по email
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера');
+                }
+
+                const users = await response.json();
+
+                if (users.length === 0) {
+                    showMessage('Пользователь не найден', 'error');
+                    return;
+                }
+
+                const user = users[0];
+                
+                // Проверяем пароль
+                const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+                
+                if (!isPasswordValid) {
+                    showMessage('Неверный пароль', 'error');
+                    return;
+                }
+
+                // Сохраняем данные пользователя
+                localStorage.setItem('user_id', user.id);
+                localStorage.setItem('user_email', user.email);
+                localStorage.setItem('username', user.username);
+                localStorage.setItem('user_role', user.role || 'user');
+                localStorage.setItem('user_data', JSON.stringify(user));
+                
+                showMessage('Успешный вход! Перенаправляем...', 'success');
+                
+                // Перенаправляем в зависимости от роли
+                setTimeout(() => {
+                    if (user.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'account.html';
+                    }
+                }, 1500);
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('Ошибка при входе. Попробуйте позже', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Автовход для тестирования (удалите в продакшене)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Если пользователь уже авторизован, перенаправляем
+            const userId = localStorage.getItem('user_id');
+            const userRole = localStorage.getItem('user_role');
+            
+            if (userId) {
+                if (userRole === 'admin') {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'account.html';
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
