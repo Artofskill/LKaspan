@@ -253,31 +253,19 @@
     </div>
 
     <script>
-        // Конфигурация Supabase (ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ)
-        const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co'; // Ваш URL
-        const SUPABASE_KEY = 'sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W; // Ваш anon key
+        // === ВАШИ ДАННЫЕ SUPABASE ===
+        const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1c2VrcnNva2ttanRsa3ZneXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg0OTQ5NjYsImV4cCI6MjA1NDA3MDk2Nn0.3FgYv-1QsX80OJfkVZpr9xSC6BNJdJQWZ44RlVINpXU';
+        // Note: sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W - это publishable key, но в REST API мы используем anon key
 
         let currentTab = 'login';
-
-        // Функция для создания простого хеша (SHA-256)
-        async function hashPassword(password) {
-            // Простая хеш-функция для MVP (в продакшене используйте bcrypt)
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return hashHex;
-        }
 
         function switchTab(tab) {
             currentTab = tab;
             
-            // Обновляем активные кнопки
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
             
-            // Активируем выбранную вкладку
             document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
             document.getElementById(`${tab}-form`).classList.add('active');
         }
@@ -314,23 +302,20 @@
                 return;
             }
 
-            if (password.length < 6) {
-                showMessage('Пароль должен содержать минимум 6 символов', 'error');
+            if (password.length < 4) {
+                showMessage('Пароль должен содержать минимум 4 символа', 'error');
                 return;
             }
 
             showLoading(true);
 
             try {
-                // Хешируем пароль
-                const hash = await hashPassword(password);
-                
                 // Рассчитываем следующую дату выплаты (через 30 дней)
                 const nextPaymentDate = new Date();
                 nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
                 const formattedDate = nextPaymentDate.toISOString().split('T')[0];
 
-                // Отправляем данные в Supabase
+                // Отправляем данные в Supabase - ПАРОЛЬ БЕЗ ХЕШИРОВАНИЯ
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
                     method: 'POST',
                     headers: {
@@ -341,7 +326,7 @@
                     },
                     body: JSON.stringify({
                         email: email,
-                        password_hash: hash,
+                        password: password, // Сохраняем пароль как есть
                         username: username,
                         registration_date: new Date().toISOString(),
                         next_payment_date: formattedDate,
@@ -366,6 +351,7 @@
                 localStorage.setItem('user_email', email);
                 localStorage.setItem('username', username);
                 localStorage.setItem('user_role', 'user');
+                localStorage.setItem('user_data', JSON.stringify(userData[0]));
                 
                 // Перенаправляем в личный кабинет через 1.5 секунды
                 setTimeout(() => {
@@ -420,10 +406,8 @@
 
                 const user = users[0];
                 
-                // Хешируем введенный пароль и сравниваем
-                const hashedPassword = await hashPassword(password);
-                
-                if (hashedPassword !== user.password_hash) {
+                // ПРОСТАЯ ПРОВЕРКА ПАРОЛЯ (без хеширования)
+                if (password !== user.password) {
                     showMessage('Неверный пароль', 'error');
                     return;
                 }
@@ -448,13 +432,13 @@
 
             } catch (error) {
                 console.error('Login error:', error);
-                showMessage('Ошибка при входе. Попробуйте позже', 'error');
+                showMessage('Ошибка при входе. Проверьте интернет соединение', 'error');
             } finally {
                 showLoading(false);
             }
         }
 
-        // Автовход для тестирования (удалите в продакшене)
+        // Автовход для тестирования
         document.addEventListener('DOMContentLoaded', function() {
             // Если пользователь уже авторизован, перенаправляем
             const userId = localStorage.getItem('user_id');
@@ -472,4 +456,3 @@
 
 </body>
 </html>
-
