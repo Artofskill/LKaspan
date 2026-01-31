@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artofskill — Личный кабинет</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg: #0d1117;
@@ -147,7 +148,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            min-height: 750px; /* Примерная высота 3 карточек */
+            min-height: 750px;
         }
         .dividends-section h2 {
             color: var(--accent);
@@ -285,6 +286,51 @@
             margin-top: 40px;
         }
         
+        /* Модальное окно редактирования кошелька */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid var(--border);
+        }
+        .modal h2 {
+            color: var(--accent);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1.1em;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .modal-buttons .btn {
+            flex: 1;
+        }
+        
         /* Анимации */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
@@ -358,6 +404,9 @@
                 width: 100%;
                 text-align: center;
             }
+            .modal-content {
+                padding: 20px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -408,13 +457,19 @@
 </head>
 <body>
 
-    <div id="login-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; display:flex; justify-content:center; align-items:center;">
-        <div style="background:var(--card); padding:40px; border-radius:20px; border:2px solid var(--border); max-width:400px; width:90%; text-align:center;">
-            <h2 style="color:var(--accent); margin-bottom:30px;">Вход в систему</h2>
-            <input type="text" id="login-username" placeholder="Логин" style="width:100%; padding:15px; margin-bottom:20px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text); font-size:1.1em;">
-            <input type="password" id="login-password" placeholder="Пароль" style="width:100%; padding:15px; margin-bottom:20px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text); font-size:1.1em;">
-            <button onclick="login()" style="width:100%; padding:16px; border-radius:12px; border:none; background:linear-gradient(90deg, var(--accent), #79c0ff); color:#000; font-weight:bold; font-size:1.2em; cursor:pointer;">Войти</button>
-            <div id="login-error" style="color:#ff7b72; margin-top:15px; display:none;">Неверный логин или пароль</div>
+    <!-- Модальное окно редактирования кошелька -->
+    <div id="walletModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-wallet"></i> Изменить кошелек</h2>
+            <input type="text" id="editWalletInput" class="modal-input" placeholder="Введите новый адрес кошелька">
+            <div class="modal-buttons">
+                <button class="btn" onclick="saveWallet()">
+                    <i class="fas fa-save"></i> Сохранить
+                </button>
+                <button class="btn btn-logout" onclick="closeWalletModal()">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+            </div>
         </div>
     </div>
 
@@ -433,19 +488,19 @@
                 <h3><i class="fas fa-user-circle"></i> Профиль</h3>
                 <div class="info-item">
                     <span class="info-label">Username:</span>
-                    <span class="info-value" id="username">Admin</span>
+                    <span class="info-value" id="username">Загрузка...</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Дата регистрации:</span>
-                    <span class="info-value" id="reg-date">15.03.2025</span>
+                    <span class="info-value" id="reg-date">Загрузка...</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Статус:</span>
-                    <span class="info-value green">Active Premium</span>
+                    <span class="info-value green" id="status">Active</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Уровень:</span>
-                    <span class="info-value">Gold Tier</span>
+                    <span class="info-value" id="level">Gold Tier</span>
                 </div>
             </div>
             
@@ -453,40 +508,39 @@
                 <h3><i class="fas fa-chart-line"></i> Инвестиции</h3>
                 <div class="info-item">
                     <span class="info-label">Общая сумма:</span>
-                    <span class="info-value" id="invest-sum">$12,500.00</span>
+                    <span class="info-value" id="total-investment">$0.00</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Текущий баланс:</span>
-                    <span class="info-value green">$14,780.50</span>
+                    <span class="info-value green" id="current-balance">$0.00</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Доходность:</span>
-                    <span class="info-value green">+18.24%</span>
+                    <span class="info-value green" id="profitability">+0.00%</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Активные сделки:</span>
-                    <span class="info-value">7</span>
+                    <span class="info-value" id="active-deals">0</span>
                 </div>
             </div>
             
             <div class="info-card">
-                <h3><i class="fas fa-wallet"></i> Кошельки</h3>
+                <h3><i class="fas fa-wallet"></i> Кошелек</h3>
                 <div class="info-item">
-                    <span class="info-label">Для вознаграждений:</span>
-                    <span class="info-value">0x7a9f...c3d2</span>
+                    <span class="info-label">Адрес кошелька:</span>
+                    <span class="info-value" id="wallet-address">Не указан</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Для пополнений:</span>
-                    <span class="info-value">TJy5...9QwE</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">USDT TRC-20:</span>
-                    <span class="info-value">TAb3...xZ9q</span>
+                    <span class="info-label">Тип:</span>
+                    <span class="info-value">USDT TRC-20</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Последняя активность:</span>
-                    <span class="info-value">2 часа назад</span>
+                    <span class="info-value" id="last-activity">Сегодня</span>
                 </div>
+                <button class="btn" onclick="openWalletModal()" style="margin-top: 20px; padding: 12px 20px; font-size: 1em;">
+                    <i class="fas fa-edit"></i> Изменить кошелек
+                </button>
             </div>
         </div>
         
@@ -496,25 +550,25 @@
             <div class="dividends-grid">
                 <div class="dividend-card">
                     <h4>Ожидаемые дивиденды</h4>
-                    <div class="dividend-amount green">$1,250.50</div>
-                    <div class="dividend-date">К выплате до: 10.04.2025</div>
+                    <div class="dividend-amount green" id="expected-dividends">$0.00</div>
+                    <div class="dividend-date">К выплате до: <span id="next-payment-date">10.04.2025</span></div>
                     <div class="dividend-date">Ежемесячная доходность: +8.5%</div>
                 </div>
                 <div class="dividend-card">
                     <h4>Выплаченные дивиденды</h4>
-                    <div class="dividend-amount">$4,780.20</div>
+                    <div class="dividend-amount" id="paid-dividends">$0.00</div>
                     <div class="dividend-date">За всё время</div>
-                    <div class="dividend-date">Всего выплат: 24</div>
+                    <div class="dividend-date">Всего выплат: <span id="total-payments">0</span></div>
                 </div>
                 <div class="dividend-card">
                     <h4>Следующая дата</h4>
-                    <div class="dividend-amount">05.04.2025</div>
+                    <div class="dividend-amount" id="next-payment-day">05.04.2025</div>
                     <div class="dividend-date">Ожидается выплата</div>
-                    <div class="dividend-date">Через: 7 дней</div>
+                    <div class="dividend-date">Через: <span id="days-until-payment">7</span> дней</div>
                 </div>
                 <div class="dividend-card">
                     <h4>Средняя выплата</h4>
-                    <div class="dividend-amount">$450.80</div>
+                    <div class="dividend-amount" id="average-payment">$0.00</div>
                     <div class="dividend-date">За последние 6 мес.</div>
                     <div class="dividend-date">Стабильный рост: +12%</div>
                 </div>
@@ -535,55 +589,7 @@
                     </tr>
                 </thead>
                 <tbody id="transactions-body">
-                    <tr>
-                        <td>28.03.2025 14:30</td>
-                        <td><span class="transaction-type type-dividend">Дивиденды</span></td>
-                        <td class="green">+$450.00</td>
-                        <td class="green">Завершено</td>
-                        <td>0x8b2f789a3c9d1e4f5a6b7c8d9e0f1a2b3c4d5e6</td>
-                    </tr>
-                    <tr>
-                        <td>25.03.2025 09:15</td>
-                        <td><span class="transaction-type type-deposit">Пополнение</span></td>
-                        <td class="green">+$2,000.00</td>
-                        <td class="green">Завершено</td>
-                        <td>TK7d3pQw9a2b4c6d8e0f1g3h5j7k9l1m3n5</td>
-                    </tr>
-                    <tr>
-                        <td>20.03.2025 16:45</td>
-                        <td><span class="transaction-type type-withdraw">Вывод средств</span></td>
-                        <td class="red">-$500.00</td>
-                        <td class="green">Завершено</td>
-                        <td>0x4c9a8e7f2d1b3c5a7e9f0d2b4c6a8e0f1d3b5</td>
-                    </tr>
-                    <tr>
-                        <td>15.03.2025 11:20</td>
-                        <td><span class="transaction-type type-dividend">Дивиденды</span></td>
-                        <td class="green">+$380.50</td>
-                        <td class="green">Завершено</td>
-                        <td>0x5e1b8d3a9c7f2e4d6a8b0c2e4f6a8b0d2e4f6</td>
-                    </tr>
-                    <tr>
-                        <td>10.03.2025 18:10</td>
-                        <td><span class="transaction-type type-deposit">Пополнение</span></td>
-                        <td class="green">+$5,000.00</td>
-                        <td class="green">Завершено</td>
-                        <td>TB3q9mXz7y5w3v1u9t7r5p3n1l9j7h5g3f1</td>
-                    </tr>
-                    <tr>
-                        <td>05.03.2025 12:45</td>
-                        <td><span class="transaction-type type-dividend">Дивиденды</span></td>
-                        <td class="green">+$420.75</td>
-                        <td class="green">Завершено</td>
-                        <td>0x3a9b7d5f1c3e5a7b9d1f3a5b7d9f1a3b5d7f9</td>
-                    </tr>
-                    <tr>
-                        <td>01.03.2025 10:30</td>
-                        <td><span class="transaction-type type-withdraw">Вывод средств</span></td>
-                        <td class="red">-$1,200.00</td>
-                        <td class="green">Завершено</td>
-                        <td>0x7f5d3b9a1c7e9f3d5b7a9c1e3f5a7b9d1f3a5</td>
-                    </tr>
+                    <!-- Данные будут загружены через JS -->
                 </tbody>
             </table>
         </div>
@@ -608,46 +614,233 @@
     </div>
 
     <script>
-        // Проверка авторизации при загрузке
-        function checkAuth() {
-            const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-            const loginOverlay = document.getElementById('login-overlay');
-            const usernameElement = document.getElementById('username');
+        // === КОНФИГУРАЦИЯ SUPABASE ===
+        const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+
+        // Проверка авторизации и загрузка данных
+        async function checkAuth() {
+            const userId = localStorage.getItem('user_id');
             
-            if (!isAuthenticated) {
-                loginOverlay.style.display = 'flex';
-            } else {
-                loginOverlay.style.display = 'none';
-                // Загружаем имя пользователя из localStorage
-                const savedUsername = localStorage.getItem('username') || 'Admin';
-                if (usernameElement) {
-                    usernameElement.textContent = savedUsername;
+            if (!userId) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            await loadUserData(userId);
+        }
+
+        // Загрузка данных пользователя
+        async function loadUserData(userId) {
+            try {
+                // Загружаем данные пользователя
+                const { data: userData, error: userError } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (userError) throw userError;
+                
+                currentUser = userData;
+                
+                // Заполняем данные профиля
+                document.getElementById('username').textContent = userData.username || 'Пользователь';
+                
+                // Форматируем дату регистрации
+                if (userData.registration_date) {
+                    const regDate = new Date(userData.registration_date);
+                    document.getElementById('reg-date').textContent = regDate.toLocaleDateString('ru-RU');
                 }
+                
+                // Статус
+                document.getElementById('status').textContent = userData.status || 'Active';
+                if (userData.status === 'active') {
+                    document.getElementById('status').className = 'info-value green';
+                } else {
+                    document.getElementById('status').className = 'info-value red';
+                }
+                
+                // Роль как уровень
+                document.getElementById('level').textContent = userData.role === 'admin' ? 'Admin' : 'Gold Tier';
+
+                // Инвестиции
+                const totalInvestment = parseFloat(userData.total_investment) || 0;
+                document.getElementById('total-investment').textContent = `$${totalInvestment.toFixed(2)}`;
+                
+                // Рассчитываем текущий баланс (инвестиции + 18.24%)
+                const currentBalance = totalInvestment * 1.1824;
+                document.getElementById('current-balance').textContent = `$${currentBalance.toFixed(2)}`;
+                document.getElementById('profitability').textContent = `+18.24%`;
+                
+                // Кошелек
+                document.getElementById('wallet-address').textContent = userData.wallet_address || 'Не указан';
+                
+                // Загружаем транзакции пользователя
+                await loadTransactions(userId);
+                
+                // Рассчитываем данные для дивидендов
+                calculateDividends(totalInvestment);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                alert('Ошибка загрузки данных пользователя');
+                logout();
             }
         }
 
-        // Функция входа
-        function login() {
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            const errorElement = document.getElementById('login-error');
+        // Загрузка транзакций
+        async function loadTransactions(userId) {
+            try {
+                const { data: transactions, error } = await supabaseClient
+                    .from('transactions')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('date', { ascending: false })
+                    .limit(10);
+
+                if (error) throw error;
+                
+                const tbody = document.getElementById('transactions-body');
+                tbody.innerHTML = '';
+                
+                if (transactions.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px;">
+                                Транзакции отсутствуют
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // Подсчитываем выплаченные дивиденды
+                let paidDividends = 0;
+                let dividendCount = 0;
+                
+                transactions.forEach(transaction => {
+                    const date = new Date(transaction.date);
+                    const formattedDate = `${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+                    
+                    let typeClass = '';
+                    let typeText = '';
+                    
+                    switch(transaction.type) {
+                        case 'deposit':
+                            typeClass = 'type-deposit';
+                            typeText = 'Пополнение';
+                            break;
+                        case 'withdraw':
+                            typeClass = 'type-withdraw';
+                            typeText = 'Вывод средств';
+                            break;
+                        case 'dividend':
+                            typeClass = 'type-dividend';
+                            typeText = 'Дивиденды';
+                            paidDividends += parseFloat(transaction.amount) || 0;
+                            dividendCount++;
+                            break;
+                        default:
+                            typeClass = 'type-deposit';
+                            typeText = transaction.type;
+                    }
+                    
+                    const amount = parseFloat(transaction.amount) || 0;
+                    const amountFormatted = amount >= 0 ? `+$${amount.toFixed(2)}` : `-$${Math.abs(amount).toFixed(2)}`;
+                    const amountClass = amount >= 0 ? 'green' : 'red';
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td><span class="transaction-type ${typeClass}">${typeText}</span></td>
+                        <td class="${amountClass}">${amountFormatted}</td>
+                        <td class="green">Завершено</td>
+                        <td>${transaction.transaction_hash || transaction.id.substring(0, 24)}...</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                // Обновляем данные о выплаченных дивидендах
+                document.getElementById('paid-dividends').textContent = `$${paidDividends.toFixed(2)}`;
+                document.getElementById('total-payments').textContent = dividendCount;
+                
+            } catch (error) {
+                console.error('Ошибка загрузки транзакций:', error);
+            }
+        }
+
+        // Расчет данных для дивидендов
+        function calculateDividends(totalInvestment) {
+            // Ожидаемые дивиденды (8.5% от инвестиций)
+            const expectedDividends = totalInvestment * 0.085;
+            document.getElementById('expected-dividends').textContent = `$${expectedDividends.toFixed(2)}`;
             
-            // Проверка логина и пароля
-            if (username === 'Admin' && password === 'Des123123@') {
-                localStorage.setItem('isAuthenticated', 'true');
-                localStorage.setItem('username', username);
-                errorElement.style.display = 'none';
-                checkAuth(); // Скрываем окно входа
-            } else {
-                errorElement.style.display = 'block';
+            // Следующая дата выплаты (из базы или рассчитываем)
+            if (currentUser && currentUser.next_payment_date) {
+                const nextDate = new Date(currentUser.next_payment_date);
+                document.getElementById('next-payment-date').textContent = nextDate.toLocaleDateString('ru-RU');
+                document.getElementById('next-payment-day').textContent = nextDate.toLocaleDateString('ru-RU');
+                
+                // Расчет дней до выплаты
+                const today = new Date();
+                const diffTime = nextDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                document.getElementById('days-until-payment').textContent = diffDays > 0 ? diffDays : 0;
             }
+            
+            // Средняя выплата (если есть транзакции)
+            const paidElement = document.getElementById('paid-dividends');
+            const paidText = paidElement.textContent.replace('$', '');
+            const paidAmount = parseFloat(paidText) || 0;
+            const totalPayments = parseInt(document.getElementById('total-payments').textContent) || 1;
+            
+            const averagePayment = paidAmount / totalPayments;
+            document.getElementById('average-payment').textContent = `$${averagePayment.toFixed(2)}`;
         }
 
-        // Функция выхода
-        function logout() {
-            localStorage.removeItem('isAuthenticated');
-            localStorage.removeItem('username');
-            window.location.href = 'index.html';
+        // Открытие модального окна редактирования кошелька
+        function openWalletModal() {
+            const currentWallet = document.getElementById('wallet-address').textContent;
+            document.getElementById('editWalletInput').value = currentWallet === 'Не указан' ? '' : currentWallet;
+            document.getElementById('walletModal').style.display = 'flex';
+        }
+
+        // Закрытие модального окна
+        function closeWalletModal() {
+            document.getElementById('walletModal').style.display = 'none';
+        }
+
+        // Сохранение кошелька
+        async function saveWallet() {
+            const newWallet = document.getElementById('editWalletInput').value.trim();
+            const userId = localStorage.getItem('user_id');
+            
+            if (!newWallet) {
+                alert('Введите адрес кошелька');
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .update({ wallet_address: newWallet })
+                    .eq('id', userId);
+
+                if (error) throw error;
+                
+                // Обновляем отображение
+                document.getElementById('wallet-address').textContent = newWallet;
+                closeWalletModal();
+                alert('Кошелек успешно обновлен!');
+                
+            } catch (error) {
+                console.error('Ошибка сохранения кошелька:', error);
+                alert('Ошибка при сохранении кошелька');
+            }
         }
 
         // Переход на страницы
@@ -655,11 +848,14 @@
             window.location.href = page;
         }
 
-        // Проверить авторизацию при загрузке
+        // Выход
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', checkAuth);
-        
-        // Защита от случайного выделения текста при двойном тапе на мобилках
-        document.addEventListener('touchstart', function(){}, { passive: true });
     </script>
 
 </body>
