@@ -181,6 +181,47 @@
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Анимация печатания */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--accent2) }
+        }
+
+        .typing-animation {
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 3px solid var(--accent2);
+            width: 0;
+            animation:
+                typing 3.5s steps(60, end) forwards,
+                blink-caret .75s step-end infinite;
+            animation-delay: 0.5s;
+        }
+
+        /* Убедимся, что текст не переносится */
+        #typing-subtitle {
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        /* Анимация печатания по буквам */
+        .typing-cursor {
+            color: var(--accent2);
+            font-weight: bold;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
         
         @media (max-width: 480px) {
             .container { padding: 0; }
@@ -189,6 +230,17 @@
             .subtitle { font-size: 1.1em; }
             .btn { padding: 16px; font-size: 1.1em; }
         }
+
+        @media (max-width: 768px) {
+            .typing-animation {
+                animation:
+                    typing 2.5s steps(40, end) forwards,
+                    blink-caret .75s step-end infinite;
+                animation-delay: 0.5s;
+                white-space: normal; /* Разрешаем перенос на мобильных */
+                border-right: none; /* Убираем курсор на мобильных */
+            }
+        }
     </style>
 </head>
 <body>
@@ -196,7 +248,7 @@
     <div class="container">
         <div class="header">
             <h1>Project ASPAN</h1>
-            <div class="subtitle">Автоматизированная система поиска арбитражных неэффективностей</div>
+            <div class="subtitle" id="typing-subtitle">Автоматизированная система поиска арбитражных неэффективностей</div>
         </div>
 
         <div class="auth-box">
@@ -432,6 +484,48 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = 'account.html';
         }
     }
+});
+
+// Более продвинутая анимация печатания (по буквам)
+function startLetterByLetterAnimation() {
+    const subtitle = document.getElementById('typing-subtitle');
+    if (!subtitle) return;
+    
+    const text = subtitle.textContent;
+    subtitle.textContent = '';
+    
+    // Создаем контейнер для анимированного текста
+    const container = document.createElement('span');
+    container.className = 'typing-container';
+    subtitle.appendChild(container);
+    
+    // Создаем курсор
+    const cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    cursor.innerHTML = '|';
+    subtitle.appendChild(cursor);
+    
+    // Анимируем появление каждой буквы
+    let i = 0;
+    function typeLetter() {
+        if (i < text.length) {
+            container.textContent += text.charAt(i);
+            i++;
+            setTimeout(typeLetter, 50); // Скорость печатания (50мс на букву)
+        } else {
+            // Когда текст напечатан, убираем курсор
+            setTimeout(() => {
+                cursor.style.opacity = '0';
+            }, 1000);
+        }
+    }
+    
+    // Начинаем анимацию
+    setTimeout(typeLetter, 500);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(startLetterByLetterAnimation, 800);
 });
     </script>
 
