@@ -62,6 +62,27 @@
             background: rgba(88,166,255,0.1);
         }
         
+        /* Стили для новых кнопок в header */
+        .header button.back-btn {
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--accent);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+
+        .header button.back-btn:hover {
+            background: rgba(88,166,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .header button.back-btn i {
+            margin-right: 5px;
+        }
+        
         /* НОВЫЙ МАКЕТ */
         .account-container {
             max-width: 1600px;
@@ -158,12 +179,72 @@
             align-items: center;
             gap: 15px;
         }
+        /* Новая структура дивидендов */
         .dividends-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
             gap: 30px;
             flex: 1;
+        }
+        .dividend-card.full-width {
+            grid-column: 1 / span 2;
+            background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(86,211,100,0.1));
+        }
+
+        /* Стили для таймера */
+        .countdown-timer {
+            text-align: center;
+        }
+        .countdown-days {
+            margin: 20px 0;
+        }
+        .countdown-number {
+            font-size: 3.5em;
+            font-weight: 800;
+            color: var(--accent);
+            display: block;
+            line-height: 1;
+        }
+        .countdown-label {
+            font-size: 1.2em;
+            color: var(--accent2);
+        }
+
+        /* Прогресс-бар */
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--green));
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+        .progress-fill:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255,255,255,0.3), 
+                transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         .dividend-card {
             background: rgba(0,0,0,0.2);
@@ -197,11 +278,7 @@
             font-size: 1.1em;
             text-align: center;
         }
-        /* Особый стиль для большой карточки дивидендов */
-        .dividend-card:nth-child(1) {
-            grid-column: span 2;
-            background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(86,211,100,0.1));
-        }
+
         
         /* ИСТОРИЯ ТРАНЗАКЦИЙ - НИЖЕ, НА ВСЮ ШИРИНУ */
         .transactions-section {
@@ -415,8 +492,46 @@
                 gap: 10px;
             }
             .info-card, .dividends-section, .transactions-section {
-                padding: 12px;
+                padding: 18px 15px; /* Увеличить сверху/снизу */
             }
+            .info-card {
+                min-height: 200px; /* Увеличить с auto на 200px */
+            }
+            /* Увеличить высоту карточки профиля */
+            .left-column > .info-card:first-child {
+                min-height: 350px !important; /* Значительно увеличиваем высоту */
+            }
+            
+            /* Уменьшить отступы между элементами в карточке */
+            .info-item {
+                margin-bottom: 12px !important; /* Уменьшаем отступы */
+                padding-bottom: 10px !important;
+            }
+            
+            /* Увеличить шрифт для уровня */
+            #level {
+                font-size: 1.2em !important;
+                font-weight: 700;
+                color: var(--accent2) !important;
+                display: inline-block;
+                padding: 4px 12px;
+                background: rgba(255, 166, 87, 0.1);
+                border-radius: 15px;
+                margin-top: 5px;
+            }
+            
+            /* Сделать flex-контейнер более компактным */
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 3px;
+                text-align: left;
+            }
+            
+            .info-value {
+                text-align: left;
+            }
+            
             .dividend-amount {
                 font-size: 1.5em;
             }
@@ -442,15 +557,6 @@
                 font-size: 0.9em;
             }
             .header { margin-bottom: 30px; }
-            .info-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
-                text-align: left;
-            }
-            .info-value {
-                text-align: left;
-            }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -474,11 +580,16 @@
     </div>
 
     <div class="header">
-        <h1>Artofskill</h1>
-        <div class="subtitle">Личный кабинет</div>
-        <a href="index.html" class="back-btn">
-            <i class="fas fa-arrow-left"></i> На главную
-        </a>
+        <h1>Project А.С.П.А.Н.</h1>
+        <div class="subtitle">Автоматизированная система поиска арбитражных неэффективностей</div>
+        <div style="display: flex; gap: 15px; margin-top: 10px; justify-content: center;">
+            <button class="back-btn" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Обновить
+            </button>
+            <button class="back-btn" onclick="logout()" style="background: rgba(255,123,114,0.1); color: var(--red);">
+                <i class="fas fa-sign-out-alt"></i> Выход
+            </button>
+        </div>
     </div>
 
     <div class="account-container">
@@ -511,16 +622,12 @@
                     <span class="info-value" id="total-investment">$0.00</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">Текущий баланс:</span>
+                    <span class="info-label">Баланс на конец года:</span>
                     <span class="info-value green" id="current-balance">$0.00</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Доходность:</span>
                     <span class="info-value green" id="profitability">+0.00%</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Активные сделки:</span>
-                    <span class="info-value" id="active-deals">0</span>
                 </div>
             </div>
             
@@ -534,10 +641,6 @@
                     <span class="info-label">Тип:</span>
                     <span class="info-value">USDT TRC-20</span>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Последняя активность:</span>
-                    <span class="info-value" id="last-activity">Сегодня</span>
-                </div>
                 <button class="btn" onclick="openWalletModal()" style="margin-top: 20px; padding: 12px 20px; font-size: 1em;">
                     <i class="fas fa-edit"></i> Изменить кошелек
                 </button>
@@ -548,11 +651,11 @@
         <div class="dividends-section">
             <h2><i class="fas fa-coins"></i> Дивиденды</h2>
             <div class="dividends-grid">
-                <div class="dividend-card">
+                <div class="dividend-card full-width">
                     <h4>Ожидаемые дивиденды</h4>
                     <div class="dividend-amount green" id="expected-dividends">$0.00</div>
+                    <div class="dividend-date">Ежемесячная доходность: <span id="monthly-percent">0%</span></div>
                     <div class="dividend-date">К выплате до: <span id="next-payment-date">10.04.2025</span></div>
-                    <div class="dividend-date">Ежемесячная доходность: +8.5%</div>
                 </div>
                 <div class="dividend-card">
                     <h4>Выплаченные дивиденды</h4>
@@ -561,16 +664,17 @@
                     <div class="dividend-date">Всего выплат: <span id="total-payments">0</span></div>
                 </div>
                 <div class="dividend-card">
-                    <h4>Следующая дата</h4>
-                    <div class="dividend-amount" id="next-payment-day">05.04.2025</div>
-                    <div class="dividend-date">Ожидается выплата</div>
-                    <div class="dividend-date">Через: <span id="days-until-payment">7</span> дней</div>
-                </div>
-                <div class="dividend-card">
-                    <h4>Средняя выплата</h4>
-                    <div class="dividend-amount" id="average-payment">$0.00</div>
-                    <div class="dividend-date">За последние 6 мес.</div>
-                    <div class="dividend-date">Стабильный рост: +12%</div>
+                    <h4>Следующая выплата через</h4>
+                    <div class="countdown-timer" id="countdown-timer">
+                        <div class="countdown-days">
+                            <span class="countdown-number" id="countdown-days">30</span>
+                            <span class="countdown-label">дней</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="dividend-date">Дата: <span id="next-payment-day">05.04.2025</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -595,21 +699,8 @@
         </div>
     </div>
 
-    <!-- КНОПКИ ДЕЙСТВИЙ -->
-    <div style="max-width: 1600px; margin: 40px auto 0; display: flex; gap: 20px; justify-content: center;">
-        <button class="btn" onclick="goTo('deposit.html')">
-            <i class="fas fa-plus-circle"></i> Пополнить счет
-        </button>
-        <button class="btn" onclick="goTo('dashboard.html')">
-            <i class="fas fa-tachometer-alt"></i> Дашборд
-        </button>
-        <button class="btn btn-logout" onclick="logout()">
-            <i class="fas fa-sign-out-alt"></i> Выйти
-        </button>
-    </div>
-
     <div class="footer">
-        © 2025 Artofskill — Личный кабинет<br>
+        © 2026 ASPAN — Личный кабинет<br>
         <span style="color:#ffa657;">Ваши инвестиции под защитой</span>
     </div>
 
@@ -656,25 +747,43 @@
                     document.getElementById('reg-date').textContent = regDate.toLocaleDateString('ru-RU');
                 }
                 
-                // Статус
-                document.getElementById('status').textContent = userData.status || 'Active';
+                // Статус из базы
+                const statusText = userData.status === 'active' ? 'Active' : 'Not Active';
+                document.getElementById('status').textContent = statusText;
                 if (userData.status === 'active') {
                     document.getElementById('status').className = 'info-value green';
                 } else {
                     document.getElementById('status').className = 'info-value red';
                 }
-                
-                // Роль как уровень
-                document.getElementById('level').textContent = userData.role === 'admin' ? 'Admin' : 'Gold Tier';
+
+                // Уровень из базы
+                let levelText = '';
+                if (userData.level === 'early_bro') {
+                    levelText = 'Early Brother';
+                } else if (userData.level === 'regular') {
+                    levelText = 'Regular';
+                } else {
+                    levelText = userData.level || 'Regular'; // по умолчанию
+                }
+                document.getElementById('level').textContent = levelText;
 
                 // Инвестиции
                 const totalInvestment = parseFloat(userData.total_investment) || 0;
                 document.getElementById('total-investment').textContent = `$${totalInvestment.toFixed(2)}`;
-                
-                // Рассчитываем текущий баланс (инвестиции + 18.24%)
-                const currentBalance = totalInvestment * 1.1824;
+
+                // Рассчитываем доходность в зависимости от уровня
+                let apy, monthlyPercent;
+                if (userData.level === 'early_bro') {
+                    apy = 120; // 120% APY
+                    monthlyPercent = 10; // 10% в месяц
+                } else {
+                    apy = 48; // 48% APY
+                    monthlyPercent = 4; // 4% в месяц
+                }
+
+                const currentBalance = totalInvestment * (1 + apy/100);
                 document.getElementById('current-balance').textContent = `$${currentBalance.toFixed(2)}`;
-                document.getElementById('profitability').textContent = `+18.24%`;
+                document.getElementById('profitability').textContent = `+${apy}% APY`;
                 
                 // Кошелек
                 document.getElementById('wallet-address').textContent = userData.wallet_address || 'Не указан';
@@ -684,6 +793,9 @@
                 
                 // Рассчитываем данные для дивидендов
                 calculateDividends(totalInvestment);
+                
+                // Запускаем таймер обратного отсчета
+                startCountdownTimer();
                 
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
@@ -775,31 +887,81 @@
 
         // Расчет данных для дивидендов
         function calculateDividends(totalInvestment) {
-            // Ожидаемые дивиденды (8.5% от инвестиций)
-            const expectedDividends = totalInvestment * 0.085;
-            document.getElementById('expected-dividends').textContent = `$${expectedDividends.toFixed(2)}`;
-            
-            // Следующая дата выплаты (из базы или рассчитываем)
-            if (currentUser && currentUser.next_payment_date) {
-                const nextDate = new Date(currentUser.next_payment_date);
-                document.getElementById('next-payment-date').textContent = nextDate.toLocaleDateString('ru-RU');
-                document.getElementById('next-payment-day').textContent = nextDate.toLocaleDateString('ru-RU');
-                
-                // Расчет дней до выплаты
-                const today = new Date();
-                const diffTime = nextDate - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                document.getElementById('days-until-payment').textContent = diffDays > 0 ? diffDays : 0;
+            // Определяем проценты в зависимости от уровня
+            let monthlyPercent;
+            if (currentUser && currentUser.level === 'early_bro') {
+                monthlyPercent = 10; // 10% в месяц для early_bro
+            } else {
+                monthlyPercent = 4; // 4% в месяц для regular
             }
             
-            // Средняя выплата (если есть транзакции)
-            const paidElement = document.getElementById('paid-dividends');
-            const paidText = paidElement.textContent.replace('$', '');
-            const paidAmount = parseFloat(paidText) || 0;
-            const totalPayments = parseInt(document.getElementById('total-payments').textContent) || 1;
+            // Обновляем отображение процента
+            document.getElementById('monthly-percent').textContent = `${monthlyPercent}%`;
             
-            const averagePayment = paidAmount / totalPayments;
-            document.getElementById('average-payment').textContent = `$${averagePayment.toFixed(2)}`;
+            // Ожидаемые дивиденды
+            const expectedDividends = totalInvestment * monthlyPercent / 100;
+            document.getElementById('expected-dividends').textContent = `$${expectedDividends.toFixed(2)}`;
+            
+            // Даты выплат
+            let nextPaymentDate = new Date();
+            if (currentUser && currentUser.next_payment_date) {
+                nextPaymentDate = new Date(currentUser.next_payment_date);
+            } else if (currentUser && currentUser.registration_date) {
+                // Если нет next_payment_date, то через 30 дней после регистрации
+                nextPaymentDate = new Date(currentUser.registration_date);
+                nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
+            }
+            
+            // Отображаем дату
+            document.getElementById('next-payment-date').textContent = 
+                nextPaymentDate.toLocaleDateString('ru-RU');
+            document.getElementById('next-payment-day').textContent = 
+                nextPaymentDate.toLocaleDateString('ru-RU');
+            
+            // Рассчитываем таймер обратного отсчета
+            updateCountdown(nextPaymentDate);
+        }
+
+        // Функция обновления таймера
+        function updateCountdown(nextPaymentDate) {
+            const today = new Date();
+            const diffTime = nextPaymentDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Отображаем дни
+            const daysElement = document.getElementById('countdown-days');
+            daysElement.textContent = diffDays > 0 ? diffDays : 0;
+            
+            // Рассчитываем прогресс (сколько дней прошло из 30)
+            const totalDays = 30;
+            const daysPassed = totalDays - diffDays;
+            const progressPercent = Math.min(100, Math.max(0, (daysPassed / totalDays) * 100));
+            
+            // Обновляем прогресс-бар
+            const progressFill = document.getElementById('progress-fill');
+            progressFill.style.width = `${progressPercent}%`;
+            
+            // Цвет прогресс-бара в зависимости от заполненности
+            if (progressPercent < 30) {
+                progressFill.style.background = 'linear-gradient(90deg, var(--accent), #79c0ff)';
+            } else if (progressPercent < 70) {
+                progressFill.style.background = 'linear-gradient(90deg, var(--accent), var(--green))';
+            } else {
+                progressFill.style.background = 'linear-gradient(90deg, var(--green), #56d364)';
+            }
+        }
+
+        // Запуск таймера каждые 10 секунд для обновления
+        function startCountdownTimer() {
+            setInterval(() => {
+                if (currentUser) {
+                    let nextPaymentDate = new Date();
+                    if (currentUser.next_payment_date) {
+                        nextPaymentDate = new Date(currentUser.next_payment_date);
+                        updateCountdown(nextPaymentDate);
+                    }
+                }
+            }, 10000); // Обновляем каждые 10 секунд
         }
 
         // Открытие модального окна редактирования кошелька
@@ -841,11 +1003,6 @@
                 console.error('Ошибка сохранения кошелька:', error);
                 alert('Ошибка при сохранении кошелька');
             }
-        }
-
-        // Переход на страницы
-        function goTo(page) {
-            window.location.href = page;
         }
 
         // Выход
