@@ -416,7 +416,8 @@
                         <th>Регистрация</th>
                         <th>Инвестиции</th>
                         <th>След. выплата</th>
-                        <th>Статус</th>
+                        <th>Ожид. выплата</th>
+                        <th>Уровень</th>
                         <th>Роль</th>
                         <th>Действия</th>
                     </tr>
@@ -518,6 +519,11 @@
             
             filteredUsers.forEach(user => {
                 const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.onclick = (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    toggleTransactions(user.id, row);
+                };
                 
                 // Форматирование даты
                 const regDate = new Date(user.registration_date).toLocaleDateString('ru-RU');
@@ -531,7 +537,8 @@
                     <td>${regDate}</td>
                     <td>$${(parseFloat(user.total_investment) || 0).toFixed(2)}</td>
                     <td>${nextPayment}</td>
-                    <td><span class="status-badge status-${user.status || 'active'}">${user.status || 'active'}</span></td>
+                    <td>$${((parseFloat(user.total_investment) || 0) * 0.10).toFixed(2)}</td>
+                    <td><span class="status-badge">${user.level || 'regular'}</span></td>
                     <td><span class="role-badge">${user.role || 'user'}</span></td>
                     <td>
                         <button class="action-btn" onclick="openTransactionModal('${user.id}')">Транзакция</button>
@@ -594,6 +601,81 @@
         function closeModal() {
             document.getElementById('transactionModal').style.display = 'none';
             resetModal();
+        }
+
+        async function toggleTransactions(userId, row) {
+            const existingRow = document.getElementById(`transactions-${userId}`);
+            
+            if (existingRow) {
+                existingRow.remove();
+                return;
+            }
+
+            const expandRow = document.createElement('tr');
+            expandRow.id = `transactions-${userId}`;
+            expandRow.innerHTML = `
+                <td colspan="10" style="padding:0; background:#0d1117;">
+                    <div style="padding:20px;">
+                        <p style="color:#888;">Загрузка...</p>
+                    </div>
+                </td>
+            `;
+            row.after(expandRow);
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${userId}&order=date.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                const transactions = await response.json();
+                const typeLabels = { deposit: 'Депозит', withdraw: 'Вывод', dividend: 'Дивиденды' };
+                const typeColors = { deposit: '#56d364', withdraw: '#ff7b72', dividend: '#ffa657' };
+
+                const content = transactions.length === 0
+                    ? '<p style="color:#888;">Транзакций нет</p>'
+                    : `<table style="width:100%; border-collapse:collapse; font-size:0.95em;">
+                        <thead>
+                            <tr>
+                                <th style="color:#ffa657; padding:10px; text-align:left; border-bottom:1px solid #30363d;">Тип</th>
+                                <th style="color:#ffa657; padding:10px; text-align:left; border-bottom:1px solid #30363d;">Сумма</th>
+                                <th style="color:#ffa657; padding:10px; text-align:left; border-bottom:1px solid #30363d;">Дата</th>
+                                <th style="color:#ffa657; padding:10px; text-align:left; border-bottom:1px solid #30363d;">Описание</th>
+                                <th style="color:#ffa657; padding:10px; text-align:left; border-bottom:1px solid #30363d;">Хэш</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transactions.map(t => `
+                                <tr>
+                                    <td style="padding:10px; border-bottom:1px solid #1e2530;">
+                                        <span style="color:${typeColors[t.type] || '#c9d1d9'}; font-weight:600;">
+                                            ${typeLabels[t.type] || t.type}
+                                        </span>
+                                    </td>
+                                    <td style="padding:10px; border-bottom:1px solid #1e2530; color:${typeColors[t.type]}; font-weight:700;">
+                                        $${parseFloat(t.amount).toFixed(2)}
+                                    </td>
+                                    <td style="padding:10px; border-bottom:1px solid #1e2530; color:#888;">
+                                        ${new Date(t.date).toLocaleDateString('ru-RU')}
+                                    </td>
+                                    <td style="padding:10px; border-bottom:1px solid #1e2530; color:#888;">
+                                        ${t.description || '—'}
+                                    </td>
+                                    <td style="padding:10px; border-bottom:1px solid #1e2530; color:#888; font-family:monospace;">
+                                        ${t.transaction_hash ? t.transaction_hash.substring(0, 16) + '...' : '—'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+
+                expandRow.querySelector('div').innerHTML = content;
+
+            } catch (error) {
+                expandRow.querySelector('div').innerHTML = '<p style="color:#ff7b72;">Ошибка загрузки транзакций</p>';
+            }
         }
 
         function resetModal() {
@@ -698,30 +780,115 @@
         }
 
         async function editUser(userId) {
-            const newStatus = prompt('Изменить статус (active/inactive):', 'active');
-            
-            if (newStatus && ['active', 'inactive'].includes(newStatus.toLowerCase())) {
-                try {
-                    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': SUPABASE_KEY,
-                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            status: newStatus.toLowerCase()
-                        })
-                    });
-                    
-                    alert('Статус обновлен!');
-                    await loadUsers();
-                    
-                } catch (error) {
-                    console.error('Error updating user:', error);
-                    alert('Ошибка обновления статуса');
-                }
+            const level = await selectLevel();
+            if (!level) return;
+            const date = await selectDate();
+
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ level: level, next_payment_date: date })
+                });
+
+                alert('Уровень обновлён!');
+                await loadUsers();
+
+            } catch (error) {
+                console.error('Error updating user:', error);
+                alert('Ошибка обновления уровня');
             }
+        }
+
+        function selectLevel() {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position:fixed; top:0; left:0; width:100%; height:100%;
+                    background:rgba(0,0,0,0.8); z-index:2000;
+                    display:flex; justify-content:center; align-items:center;
+                `;
+
+                overlay.innerHTML = `
+                    <div style="background:#161b22; border-radius:16px; padding:30px; border:2px solid #30363d; min-width:300px;">
+                        <h3 style="color:#58a6ff; margin-bottom:20px; font-size:1.4em;">Выбери уровень</h3>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <button data-level="regular"
+                                style="padding:14px; border-radius:10px; border:2px solid #30363d; background:#0d1117; color:#c9d1d9; font-size:1em; cursor:pointer;">
+                                Regular
+                            </button>
+                            <button data-level="early_bro"
+                                style="padding:14px; border-radius:10px; border:2px solid #30363d; background:#0d1117; color:#ffa657; font-size:1em; cursor:pointer;">
+                                Early Bro
+                            </button>
+                            <button data-level="vip"
+                                style="padding:14px; border-radius:10px; border:2px solid #30363d; background:#0d1117; color:#56d364; font-size:1em; cursor:pointer;">
+                                VIP
+                            </button>
+                            <button data-level="cancel"
+                                style="padding:10px; border-radius:10px; border:none; background:transparent; color:#888; font-size:0.95em; cursor:pointer;">
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                overlay.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const level = btn.dataset.level;
+                        document.body.removeChild(overlay);
+                        resolve(level === 'cancel' ? null : level);
+                    });
+                });
+            });
+        }
+
+        function selectDate() {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position:fixed; top:0; left:0; width:100%; height:100%;
+                    background:rgba(0,0,0,0.8); z-index:2000;
+                    display:flex; justify-content:center; align-items:center;
+                `;
+
+                overlay.innerHTML = `
+                    <div style="background:#161b22; border-radius:16px; padding:30px; border:2px solid #30363d; min-width:300px;">
+                        <h3 style="color:#58a6ff; margin-bottom:20px; font-size:1.4em;">Следующая выплата</h3>
+                        <input type="date" id="date-input"
+                            style="width:100%; padding:14px; border-radius:10px; border:2px solid #30363d; background:#0d1117; color:#c9d1d9; font-size:1em; margin-bottom:16px;">
+                        <div style="display:flex; gap:10px;">
+                            <button id="date-confirm"
+                                style="flex:1; padding:14px; border-radius:10px; border:none; background:linear-gradient(90deg,#58a6ff,#79c0ff); color:#000; font-weight:600; font-size:1em; cursor:pointer;">
+                                Сохранить
+                            </button>
+                            <button id="date-cancel"
+                                style="flex:1; padding:14px; border-radius:10px; border:2px solid #30363d; background:transparent; color:#888; font-size:1em; cursor:pointer;">
+                                Пропустить
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                overlay.querySelector('#date-confirm').addEventListener('click', () => {
+                    const val = overlay.querySelector('#date-input').value;
+                    document.body.removeChild(overlay);
+                    resolve(val || null);
+                });
+
+                overlay.querySelector('#date-cancel').addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                    resolve(null);
+                });
+            });
         }
 
         function showError(message) {
