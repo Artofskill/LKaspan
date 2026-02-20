@@ -1,0 +1,2871 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spread Alert</title>
+    <!-- Добавляем Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Единые переменные как в index.html */
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --accent2: #ffa657;
+            --green: #56d364;
+            --red: #ff7b72;
+            --border: #30363d;
+        }
+        
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px 15px;
+            animation: fadeIn 1s ease-out;
+            scroll-behavior: smooth;
+        }
+        
+        /* ФИКСИРОВАННЫЙ верхний блок в стиле index.html */
+        .header-container {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 15px;
+            margin: 0 auto 15px;
+            max-width: 1400px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border: 2px solid var(--border);
+            animation: slideUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+        }
+        
+        /* Блок времени в стиле карточек index.html */
+        .time-block {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 0 auto 20px;
+            border: 1px solid var(--border);
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .ntp-time {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #ffa657;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(255, 165, 87, 0.5);
+            margin: 0;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .home-btn, .refresh-btn {
+            background: transparent;
+            color: var(--green);
+            border: 1px solid var(--green);
+            border-radius: 50px;
+            padding: 10px 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            font-size: 1em;
+        }
+        
+        .home-btn:hover, .refresh-btn:hover {
+            background: rgba(86, 211, 100, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(86, 211, 100, 0.2);
+        }
+        
+        .home-btn {
+            order: 1;
+        }
+        
+        .refresh-btn {
+            order: 3;
+        }
+        
+        /* Таймер обратного отсчета фандинга */
+        .funding-timer {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            order: 2;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .funding-timer.green {
+            color: var(--green);
+            border-color: var(--green);
+        }
+        
+        .funding-timer.red {
+            color: var(--red);
+            border-color: var(--red);
+        }
+        
+        /* Основной контент */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Сетка блоков в стиле index.html */
+        .wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .block {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border: 2px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: slideUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .block:nth-child(1) { animation-delay: 0.1s; }
+        .block:nth-child(2) { animation-delay: 0.2s; }
+        .block:nth-child(3) { animation-delay: 0.3s; }
+        .block:nth-child(4) { animation-delay: 0.4s; }
+        
+        .block:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent);
+            box-shadow: 0 25px 50px rgba(88,166,255,0.3);
+        }
+        
+        .block h2 {
+            color: var(--accent);
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* Стили для блоков с графиками */
+        .chart-block, .chartjs-block {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border: 2px solid var(--border);
+            margin-bottom: 40px;
+            animation: slideUp 0.8s ease-out forwards 0.5s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .chart-block h2, .chartjs-block h2 {
+            color: var(--accent);
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .chartjs-block h2 {
+            color: #7ffe94;
+        }
+        
+        /* Формы и кнопки в стиле index.html */
+        input, select, button {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            margin: 8px 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        button {
+            background: linear-gradient(90deg, var(--accent), #79c0ff);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(88,166,255,0.3);
+        }
+        
+        button.stop {
+            background: linear-gradient(90deg, #ff4444, #ff6666);
+        }
+        
+        button.stop:hover {
+            box-shadow: 0 8px 25px rgba(255, 68, 68, 0.3);
+        }
+        
+        /* Контент внутри блоков */
+        .content, .funding-result {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        /* Контейнеры для графиков */
+        .chart-container, .chartjs-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            margin-top: 20px;
+            flex: 1;
+            min-height: 400px;
+        }
+        
+        #tradingview-chart, #spread-chart {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Кнопки управления графиками */
+        .chart-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .chart-btn {
+            background: linear-gradient(90deg, var(--accent), #79c0ff);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .chart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(88,166,255,0.3);
+        }
+        
+        .chart-btn.update {
+            background: linear-gradient(90deg, #56d364, #7ffe94);
+        }
+        
+        .chart-btn.clear {
+            background: linear-gradient(90deg, #ff7b72, #ff9999);
+        }
+        
+        /* Счетчик точек на графике */
+        .chart-counter {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1em;
+            color: var(--accent2);
+        }
+        
+        /* Floating Button (Плавающая кнопка) */
+        .floating-menu {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .floating-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            transition: all 0.3s;
+        }
+        
+        .floating-btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        }
+        
+        .floating-btn.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Подсказки для кнопок */
+        .floating-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            right: 80px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--card);
+            color: var(--text);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+            border: 1px solid var(--border);
+        }
+        
+        .floating-btn:hover::after {
+            opacity: 1;
+            visibility: visible;
+            right: 85px;
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Специфичные стили для содержимого блоков (сохраняем функционал) */
+        .ticker-big { 
+            font-size: 1.8em; 
+            font-weight: 700; 
+            color: var(--accent); 
+            margin-bottom: 15px; 
+            text-align: center;
+        }
+        
+        .spread-big { 
+            font-size: 2.5em; 
+            font-weight: 900; 
+            margin: 20px 0; 
+            text-align: center;
+        }
+        
+        .my-spread-num, .current-profit-num { 
+            font-size: 2.2em; 
+            font-weight: 900; 
+            margin: 20px 0; 
+            text-align: center;
+        }
+        
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+        
+        .alert-min, .alert-max {
+            animation: flash 0.8s infinite;
+        }
+        
+        .alert-min {
+            background: rgba(22, 101, 52, 0.3) !important;
+            color: white;
+        }
+        
+        .alert-max {
+            background: rgba(127, 29, 29, 0.3) !important;
+            color: white;
+        }
+        
+        @keyframes flash { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.6; } 
+        }
+        
+        /* Стили для PnL */
+        .pnl-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .pnl-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        
+        .pnl-label {
+            font-weight: 600;
+        }
+        
+        .pnl-value {
+            font-weight: bold;
+        }
+        
+        /* Стили для комиссии */
+        .commission-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .commission-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        
+        .commission-label {
+            font-weight: 600;
+            color: var(--accent2);
+        }
+        
+        .commission-value {
+            font-weight: bold;
+        }
+        
+        /* Новая структура для блока "Моя позиция" */
+        .position-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .position-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .position-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .position-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent2);
+            text-align: center;
+        }
+        
+        .position-subtitle {
+            font-size: 0.9em;
+            color: var(--accent);
+            text-align: center;
+        }
+        
+        /* Стили для полосы прокрутки */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            opacity: 0.8;
+        }
+        
+        /* Якорные точки */
+        .anchor {
+            position: relative;
+            top: -100px;
+            visibility: hidden;
+        }
+        
+        /* Стиль для кнопки QR */
+        #qr-btn {
+            background: linear-gradient(90deg, #7ffe94, #a8ffbb);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+            width: 100%;
+        }
+        
+        #qr-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(127, 254, 148, 0.3);
+        }
+        
+        /* УЛУЧШЕННАЯ мобильная адаптация */
+        @media (max-width: 768px) {
+            /* Скрываем блок с TradingView на мобильной версии */
+            .chart-block {
+                display: none !important;
+            }
+            
+            body {
+                padding: 15px 10px;
+            }
+            
+            h1 {
+                font-size: 2.4em;
+                margin: 15px 0;
+            }
+            
+            .header-container {
+                padding: 10px;
+                margin-bottom: 15px;
+                border-radius: 16px;
+            }
+            
+            .time-block {
+                padding: 10px;
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .ntp-time {
+                font-size: 2em;
+                margin: 0;
+                order: 2;
+            }
+            
+            .home-btn, .refresh-btn {
+                padding: 6px 12px;
+                font-size: 0.8em;
+                margin: 3px;
+            }
+            
+            .home-btn {
+                order: 1;
+            }
+            
+            .refresh-btn {
+                order: 3;
+            }
+            
+            .funding-timer {
+                order: 4;
+                margin-top: 8px;
+                font-size: 0.9em;
+                padding: 6px 12px;
+            }
+            
+            .wrapper {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .block {
+                padding: 25px;
+                border-radius: 20px;
+                min-height: auto;
+            }
+            
+            .block h2 {
+                font-size: 1.6em;
+            }
+            
+            .chart-block, .chartjs-block {
+                padding: 25px;
+                border-radius: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .chart-block h2, .chartjs-block h2 {
+                font-size: 1.6em;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 350px;
+            }
+            
+            .floating-menu {
+                right: 15px;
+                bottom: 15px;
+            }
+            
+            .floating-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 0.85em;
+            }
+            
+            .floating-btn::after {
+                font-size: 0.8em;
+                right: 70px;
+            }
+            
+            .floating-btn:hover::after {
+                right: 75px;
+            }
+            
+            .chart-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .chart-btn {
+                width: 100%;
+                padding: 10px;
+            }
+            
+            input, select, button {
+                padding: 12px 14px;
+                font-size: 0.9em;
+            }
+            
+            .position-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .ticker-big {
+                font-size: 1.5em;
+            }
+            
+            .spread-big {
+                font-size: 2em;
+            }
+            
+            .my-spread-num, .current-profit-num {
+                font-size: 1.8em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .block {
+                padding: 20px;
+            }
+            
+            .block h2 {
+                font-size: 1.4em;
+            }
+            
+            .chart-block, .chartjs-block {
+                padding: 20px;
+            }
+            
+            .chart-block h2, .chartjs-block h2 {
+                font-size: 1.4em;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .ntp-time {
+                font-size: 2em;
+            }
+            
+            .floating-menu {
+                right: 10px;
+                bottom: 10px;
+            }
+            
+            .floating-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 0.75em;
+            }
+            
+            .home-btn, .refresh-btn {
+                padding: 4px 8px;
+                font-size: 0.7em;
+                margin: 2px;
+            }
+            
+            .funding-timer {
+                font-size: 0.75em;
+                padding: 3px 6px;
+            }
+            
+            .ntp-time {
+                font-size: 1.8em;
+            }
+            
+            .time-block {
+                padding: 8px;
+                gap: 6px;
+            }
+            
+            .header-container {
+                padding: 8px;
+                margin-bottom: 10px;
+            }
+            
+            input, select, button {
+                padding: 10px 12px;
+                font-size: 0.85em;
+            }
+            
+            .chart-btn {
+                padding: 8px;
+            }
+            
+            .floating-btn::after {
+                font-size: 0.7em;
+                right: 60px;
+            }
+            
+            .floating-btn:hover::after {
+                right: 65px;
+            }
+            
+            .floating-menu {
+                right: 10px;
+                bottom: 10px;
+            }
+            
+            .chart-controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .chart-counter {
+                font-size: 0.9em;
+                margin: 10px 0;
+            }
+            
+            .block {
+                padding: 20px;
+            }
+            
+            .block h2 {
+                font-size: 1.4em;
+            }
+            
+            .chart-block, .chartjs-block {
+                padding: 20px;
+            }
+            
+            .chart-block h2, .chartjs-block h2 {
+                font-size: 1.4em;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .ticker-big {
+                font-size: 1.5em;
+            }
+            
+            .spread-big {
+                font-size: 2em;
+            }
+            
+            .my-spread-num, .current-profit-num {
+                font-size: 1.8em;
+            }
+            
+            .position-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .position-section {
+                min-height: 140px;
+            }
+            
+            .position-title {
+                font-size: 1em;
+            }
+            
+            .position-subtitle {
+                font-size: 0.8em;
+            }
+            
+            .position-usdt {
+                font-size: 0.9em;
+            }
+            
+            .content, .funding-result {
+                padding: 15px;
+            }
+            
+            .pnl-section, .commission-section {
+                margin-top: 15px;
+                padding-top: 15px;
+            }
+            
+            .pnl-line, .commission-line {
+                margin: 6px 0;
+            }
+            
+            .pnl-label, .commission-label {
+                font-size: 0.9em;
+            }
+            
+            .pnl-value, .commission-value {
+                font-size: 0.9em;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+            
+            .chart-container, .chartjs-container {
+                min-height: 300px;
+            }
+        }
+        /* Стили для ПК-версии (широких экранов) */
+        @media (min-width: 992px) {
+            /* 1. Убираем ограничение по ширине у основных контейнеров */
+            .header-container,
+            .main-content {
+                max-width: 98% !important;
+                width: 98% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                padding: 12px !important;
+            }
+            
+            /* 2. Сетка: два блока сверху, Funding на всю ширину снизу */
+            .wrapper {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: auto auto !important;
+                gap: 25px !important;
+            }
+            
+            /* 3. Распределяем блоки по ячейкам */
+            .block:nth-child(1) { /* LIVE Spread + Current Profit */
+                grid-column: 1;
+                grid-row: 1;
+            }
+            
+            .block:nth-child(2) { /* My Position */
+                grid-column: 2;
+                grid-row: 1;
+            }
+            
+            #funding-block { /* Funding Info — на всю ширину */
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+            
+            /* 4. Делаем блоки шире и выше */
+            .block {
+                min-height: 320px !important;
+                padding: 30px !important;
+            }
+            
+            /* 5. Увеличиваем высоту контейнеров с графиками */
+            .chart-container,
+            .chartjs-container {
+                min-height: 500px !important;
+                height: 500px !important;
+            }
+            
+            /* 6. Делаем блоки с графиками на всю ширину */
+            .chart-block {
+                display: block !important; /* Показываем TradingView на ПК */
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                padding: 30px !important;
+                margin-bottom: 40px !important;
+            }
+            
+            .chartjs-block {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                padding: 30px !important;
+            }
+            
+            /* 7. Увеличиваем высоту контента внутри блоков */
+            .content {
+                min-height: 180px !important;
+            }
+            
+            /* 8. Увеличиваем размеры элементов формы */
+            input, select, button {
+                padding: 12px 18px !important;
+                font-size: 1em !important;
+            }
+            
+            /* 9. Увеличиваем шрифты для лучшей читаемости */
+            h2 {
+                font-size: 1.8em !important;
+            }
+            
+            /* 10. Позиционируем блок времени более компактно */
+            .time-block {
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 10px 20px !important;
+                gap: 15px !important;
+            }
+            
+            .ntp-time {
+                font-size: 2.4em !important;
+                margin: 0 !important;
+                flex: 1 !important;
+                text-align: center !important;
+            }
+            
+            .funding-timer {
+                margin: 0 !important;
+                order: 2;
+                flex: 1 !important;
+                text-align: center !important;
+            }
+            
+            .home-btn {
+                order: 1 !important;
+            }
+            
+            .refresh-btn {
+                order: 3 !important;
+            }
+            
+            /* 11. Улучшаем отображение позиций */
+            .position-row {
+                gap: 30px !important;
+            }
+            
+            .position-section {
+                min-height: 160px !important;
+            }
+            
+            /* 12. Увеличиваем размер текста в результатах */
+            .ticker-big {
+                font-size: 2.2em !important;
+            }
+            
+            .spread-big {
+                font-size: 3em !important;
+            }
+            
+            .my-spread-num,
+            .current-profit-num {
+                font-size: 2.8em !important;
+            }
+            
+            /* 13. Улучшаем отображение плавающих кнопок */
+            .floating-menu {
+                bottom: 40px !important;
+                right: 40px !important;
+            }
+            
+            .floating-btn {
+                width: 80px !important;
+                height: 80px !important;
+                font-size: 1.2em !important;
+            }
+        }
+
+/* Стили для очень широких экранов (больше 1400px) */
+@media (min-width: 1400px) {
+    .wrapper {
+        gap: 35px !important;
+    }
+    
+    .block {
+        min-height: 350px !important;
+        padding: 35px !important;
+    }
+    
+    .chart-container,
+    .chartjs-container {
+        min-height: 600px !important;
+        height: 600px !important;
+    }
+    
+    .header-container,
+    .main-content {
+        max-width: 1400px !important;
+    }
+}
+
+/* Для экранов меньше 992px но больше 768px (планшеты) */
+@media (min-width: 769px) and (max-width: 991px) {
+    .wrapper {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto auto auto !important;
+    }
+    
+    .block:nth-child(1),
+    .block:nth-child(2),
+    .block:nth-child(3),
+    .block:nth-child(4) {
+        grid-column: 1;
+    }
+    
+    .block:nth-child(1) {
+        grid-row: 1;
+    }
+    
+    .block:nth-child(2) {
+        grid-row: 2;
+    }
+    
+    .block:nth-child(3) {
+        grid-row: 3;
+    }
+    
+    .block:nth-child(4) {
+        grid-row: 4;
+    }
+    
+    .chart-block {
+        display: block !important; /* Показываем TradingView на планшетах */
+    }
+    
+    .chart-container,
+    .chartjs-container {
+        min-height: 450px !important;
+        height: 450px !important;
+    }
+    
+    .block {
+        min-height: 300px !important;
+    }
+}
+
+/* Исправление для графиков */
+#tradingview-chart,
+#spread-chart {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+}
+
+/* Убедитесь, что контейнеры графиков правильно растягиваются */
+.chartjs-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Для TradingView */
+#tradingview-chart > div {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Улучшение для очень маленьких экранов (мобильные) */
+@media (max-width: 480px) {
+    .chartjs-container {
+        min-height: 300px !important;
+        height: 300px !important;
+    }
+}
+    </style>
+    
+    <!-- Библиотека для генерации QR кодов -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <script>
+// Проверка авторизации при загрузке
+if (!localStorage.getItem('user_id') || localStorage.getItem('user_role') !== 'admin') {
+    window.location.href = 'index.html';
+}
+</script>
+
+<!-- Кнопка выхода -->
+<button onclick="logout()" style="position:fixed; top:20px; right:20px; padding:10px 20px; border-radius:12px; border:none; background:linear-gradient(90deg, #ff7b72, #ff9999); color:white; font-weight:bold; cursor:pointer; z-index:10000;">Выход</button>
+
+    <!-- ФИКСИРОВАННЫЙ верхний блок -->
+    <div class="header-container">
+        <!-- Блок времени в самом верху -->
+        <div class="time-block">
+            <button class="home-btn" onclick="goHome()">🏠 Главная</button>
+            <div class="ntp-time" id="ntp-clock">00:00:00</div>
+            <button class="refresh-btn" onclick="syncNTPTime()">↻ Обновить время</button>
+            <div class="funding-timer" id="funding-timer" style="display: none;"></div>
+        </div>
+
+    </div>
+
+    <!-- Основной контент -->
+    <div class="main-content">
+        <!-- Якорь для Live блоков -->
+        <div id="live-blocks" class="anchor"></div>
+        
+        <div class="wrapper">
+            <!-- 1. LIVE спред -->
+            <div class="block">
+                <h2>LIVE Spread</h2>
+                <input type="text" id="ticker" placeholder="Введите тикер" autofocus>
+                <div style="margin:15px 0; font-size: 0.95em; text-align: center;">
+                    ≤ <input type="number" id="min-alert" step="0.01" value="0" style="width:80px;"> %
+                    ≥ <input type="number" id="max-alert" step="0.01" value="0" style="width:80px;"> %
+                </div>
+                <button id="start-btn" onclick="startMonitoring()">СТАРТ</button>
+                <button id="stop-btn" onclick="stopMonitoring()" style="display:none;" class="stop">СТОП</button>
+                <button onclick="openHeatmap()" style="background: linear-gradient(90deg, #ff6b35, #ff4500);">🔥 Heatmap</button>
+                <div class="content" id="result">Готов к запуску</div>
+                <h2 style="margin-top: 25px;">Current Profit</h2>
+                <div class="content" id="profit-result">
+                    Запусти мониторинг и введи позицию
+                </div>
+            </div>
+
+            <!-- 2. Моя позиция -->
+            <div class="block">
+                <h2>My Position</h2>
+                
+                <div class="position-container">
+                    <!-- Long позиция -->
+                    <div class="position-row">
+                        <div class="position-section">
+                            <div class="position-title">Long</div>
+                            <div class="position-subtitle">Биржа</div>
+                            <select id="long-exchange" class="exchange-select">
+                                <option value="bybit">Bybit</option>
+                                <option value="binance" selected>Binance</option>
+                            </select>
+                            <div class="position-subtitle">Вход</div>
+                            <input type="number" step="0.000001" id="long-price" placeholder="0.146638" class="position-input" oninput="updatePositionUsdt()">
+                        </div>
+                        
+                        <!-- Short позиция -->
+                        <div class="position-section">
+                            <div class="position-title">Short</div>
+                            <div class="position-subtitle">Биржа</div>
+                            <select id="short-exchange" class="exchange-select">
+                                <option value="bybit" selected>Bybit</option>
+                                <option value="binance">Binance</option>
+                            </select>
+                            <div class="position-subtitle">Вход</div>
+                            <input type="number" step="0.000001" id="short-price" placeholder="0.148440" class="position-input" oninput="updatePositionUsdt()">
+                        </div>
+                    </div>
+
+                    <!-- Размер позиции -->
+                    <div class="position-section" style="margin-top: 15px;">
+                        <div class="position-subtitle">Объём позиции (USDT)</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 8px 0;">
+                            <button type="button" onclick="setPositionUsdt(500)"  style="padding: 6px 12px; font-size: 0.85em; margin: 0;">500</button>
+                            <button type="button" onclick="setPositionUsdt(1000)" style="padding: 6px 12px; font-size: 0.85em; margin: 0;">1000</button>
+                            <button type="button" onclick="setPositionUsdt(1500)" style="padding: 6px 12px; font-size: 0.85em; margin: 0;">1500</button>
+                            <button type="button" onclick="setPositionUsdt(2000)" style="padding: 6px 12px; font-size: 0.85em; margin: 0;">2000</button>
+                        </div>
+                        <input type="number" id="position-usdt-input" placeholder="Введите USDT вручную" class="position-input" oninput="calcLotsFromUsdt()">
+                        <div class="position-subtitle" style="margin-top: 8px;">Размер позиции (монеты, автоматически)</div>
+                        <input type="number" id="position-size" placeholder="—" class="position-input">
+                        <div class="position-usdt" id="position-usdt-display" style="text-align: center; margin-top: 10px; color: var(--accent); font-weight: bold;">
+                            Размер в USDT: -
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="fillCurrentPrices()" style="margin-top: 20px; background: linear-gradient(90deg, #56d364, #7ffe94);">📡 Текущие цены</button>
+                <button onclick="calcMySpread()">РАССЧИТАТЬ</button>
+                <button id="qr-btn" onclick="generateQR()">📱 QR Позиции</button>
+                <div class="content" id="my-result">—</div>
+            </div>
+
+            <!-- 3. Funding Info -->
+            <div class="block" id="funding-block">
+                <h2>Funding Info</h2>
+                <div class="funding-result" id="funding-result">
+                    Запусти мониторинг
+                </div>
+            </div>
+        </div>
+
+        <!-- Якорь для графика Chart.js -->
+        <div id="history-spread" class="anchor"></div>
+        
+        <!-- 5. Блок графика спреда Chart.js -->
+        <div class="chartjs-block">
+            <h2>📊 История спреда (Chart.js) - 360 записей</h2>
+            <div class="chart-controls">
+                <button class="chart-btn update" onclick="startChartUpdates()">▶️ Начать запись</button>
+                <button class="chart-btn" onclick="stopChartUpdates()">⏸️ Остановить запись</button>
+                <button class="chart-btn clear" onclick="clearChartData()">🗑️ Очистить график</button>
+            </div>
+            <div class="chart-counter" id="chart-counter">
+                Записей: 0/360
+            </div>
+            <div class="chartjs-container">
+                <canvas id="spread-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Якорь для графика TradingView -->
+        <div id="tradingview-chart-section" class="anchor"></div>
+        
+        <!-- 6. Блок для графика TradingView -->
+        <div class="chart-block">
+            <h2>📈 График спреда между биржами (TradingView)</h2>
+            <div class="chart-controls">
+                <button class="chart-btn update" onclick="updateTradingViewChart()">🔄 Обновить график</button>
+                <button class="chart-btn" onclick="openTradingView()">🌐 Открыть в TradingView</button>
+                <button class="chart-btn" onclick="changeChartInterval('15')">15м</button>
+                <button class="chart-btn" onclick="changeChartInterval('60')">1ч</button>
+                <button class="chart-btn" onclick="changeChartInterval('240')">4ч</button>
+            </div>
+            <div class="chart-container">
+                <div id="tradingview-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Menu (Плавающее меню) -->
+    <div class="floating-menu">
+        <button class="floating-btn live" data-tooltip="LIVE Spread" onclick="scrollToSection('live-blocks')">
+            LIVE
+        </button>
+        <button class="floating-btn history" data-tooltip="История спреда" onclick="scrollToSection('history-spread')">
+            HS
+        </button>
+        <button class="floating-btn tradingview" data-tooltip="TradingView Chart" onclick="scrollToSection('tradingview-chart-section')">
+            TV
+        </button>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Весь JavaScript код остается БЕЗ ИЗМЕНЕНИЙ
+        // Динамическое обновление title страницы
+        function updatePageTitle(ticker, spread) {
+            if (ticker && spread !== undefined) {
+                document.title = `${ticker} | ${spread}% | Spread Alert`;
+            } else if (ticker) {
+                document.title = `${ticker} | Spread Alert`;
+            } else {
+                document.title = 'Spread Alert';
+            }
+        }
+
+        // NTP-синхронизация времени
+        let ntpOffset = 0;
+        let fundingTimerActive = false;
+        let fundingTimerInterval = null;
+        let currentTimerFundingSpread = 0;
+        let currentTicker = '';
+        
+        // Переменные для графика Chart.js
+        let spreadChart = null;
+        let chartData = {
+            labels: [],
+            datasets: [{
+                label: 'Спред %',
+                data: [],
+                borderColor: '#58a6ff',
+                backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: function(context) {
+                    const value = context.dataset.data[context.dataIndex];
+                    return value >= 0 ? '#56d364' : '#ff7b72';
+                },
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
+            }]
+        };
+        let maxDataPoints = 360;
+        let chartUpdateInterval = null;
+        let isChartRecording = false;
+        let currentChartInterval = '15';
+
+        // Инициализация графика Chart.js
+        function initChart() {
+            const ctx = document.getElementById('spread-chart').getContext('2d');
+            
+            spreadChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#161b22',
+                            titleColor: '#ffa657',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Спред: ${context.parsed.y.toFixed(3)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: '#30363d',
+                                borderColor: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                maxTicksLimit: 10,
+                                callback: function(value, index, values) {
+                                    if (values.length <= 20) return this.getLabelForValue(value);
+                                    if (index % Math.floor(values.length / 10) === 0 || index === values.length - 1) {
+                                        return this.getLabelForValue(value);
+                                    }
+                                    return '';
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: '#30363d',
+                                borderColor: '#30363d'
+                            },
+                            ticks: {
+                                color: '#8b949e',
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            },
+                            suggestedMin: -2,
+                            suggestedMax: 2
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    elements: {
+                        point: {
+                            radius: 3,
+                            hoverRadius: 5
+                        }
+                    },
+                    animation: {
+                        duration: 300
+                    }
+                }
+            });
+            
+            updateChartCounter();
+        }
+
+        // Обновление графика новыми данными
+        function updateChart(spreadValue) {
+            if (!spreadChart) return;
+            
+            const now = new Date();
+            const timeLabel = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0') + ':' + 
+                             now.getSeconds().toString().padStart(2, '0');
+            
+            chartData.labels.push(timeLabel);
+            chartData.datasets[0].data.push(spreadValue);
+            
+            if (chartData.labels.length > maxDataPoints) {
+                chartData.labels.shift();
+                chartData.datasets[0].data.shift();
+            }
+            
+            const dataValues = chartData.datasets[0].data;
+            if (dataValues.length > 0) {
+                const minValue = Math.min(...dataValues);
+                const maxValue = Math.max(...dataValues);
+                const padding = Math.max(Math.abs(minValue), Math.abs(maxValue)) * 0.2;
+                
+                spreadChart.options.scales.y.min = minValue - padding;
+                spreadChart.options.scales.y.max = maxValue + padding;
+            }
+            
+            spreadChart.update('none');
+            updateChartCounter();
+        }
+
+        // Обновление счетчика точек
+        function updateChartCounter() {
+            const count = chartData.labels.length;
+            const counterElement = document.getElementById('chart-counter');
+            counterElement.textContent = `Записей: ${count}/${maxDataPoints}`;
+            
+            if (count >= maxDataPoints * 0.9) {
+                counterElement.style.color = '#ff7b72';
+            } else if (count >= maxDataPoints * 0.7) {
+                counterElement.style.color = '#ffa657';
+            } else if (count >= maxDataPoints * 0.5) {
+                counterElement.style.color = '#ffd33d';
+            } else {
+                counterElement.style.color = '#8b949e';
+            }
+        }
+
+        // Запуск автоматического обновления графика
+        function startChartUpdates() {
+            if (isChartRecording) return;
+            
+            if (!monitorActive) {
+                alert('Запустите мониторинг спреда сначала!');
+                return;
+            }
+            
+            isChartRecording = true;
+            const updateBtn = document.querySelector('.chartjs-block .chart-controls .update');
+            updateBtn.textContent = '⏺️ Запись...';
+            updateBtn.style.background = 'linear-gradient(90deg, #ff7b72, #ff9999)';
+            updateChartCounter();
+        }
+
+        // Остановка обновления графика
+        function stopChartUpdates() {
+            isChartRecording = false;
+            const updateBtn = document.querySelector('.chartjs-block .chart-controls .update');
+            updateBtn.textContent = '▶️ Начать запись';
+            updateBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+        }
+
+        // Очистка данных графика
+        function clearChartData() {
+            if (chartData.labels.length === 0) {
+                alert('График уже пуст!');
+                return;
+            }
+            
+            if (confirm('Очистить все данные графика?')) {
+                chartData.labels = [];
+                chartData.datasets[0].data = [];
+                
+                if (spreadChart) {
+                    spreadChart.update();
+                }
+                
+                updateChartCounter();
+                
+                const clearBtn = document.querySelector('.chart-btn.clear');
+                const originalText = clearBtn.textContent;
+                clearBtn.textContent = '✓ Очищено!';
+                clearBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+                
+                setTimeout(() => {
+                    clearBtn.textContent = originalText;
+                    clearBtn.style.background = 'linear-gradient(90deg, #ff7b72, #ff9999)';
+                }, 2000);
+            }
+        }
+
+        // Изменение интервала графика TradingView
+        function changeChartInterval(interval) {
+            currentChartInterval = interval;
+            updateTradingViewChart();
+            
+            document.querySelectorAll('.chart-block .chart-btn').forEach(btn => {
+                if (btn.textContent.includes('м') || btn.textContent.includes('ч')) {
+                    btn.style.background = 'linear-gradient(90deg, #58a6ff, #79c0ff)';
+                }
+            });
+            event.target.style.background = 'linear-gradient(90deg, #7ffe94, #a8ffbb)';
+        }
+
+        // Обновление графика TradingView
+        function updateTradingViewChart() {
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            if (!ticker) {
+                alert('Введите тикер для отображения графика!');
+                return;
+            }
+            
+            loadTradingViewChart(ticker);
+            
+            const updateBtn = document.querySelector('.chart-block .chart-btn.update');
+            const originalText = updateBtn.textContent;
+            updateBtn.textContent = '✓ График обновлен!';
+            updateBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+            
+            setTimeout(() => {
+                updateBtn.textContent = originalText;
+                updateBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+            }, 2000);
+        }
+
+        // Функция для загрузки графика TradingView
+        function loadTradingViewChart(ticker) {
+            if (!ticker || ticker.trim() === '') {
+                document.getElementById('tradingview-chart').innerHTML = 
+                    '<div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #8b949e; text-align: center; padding: 20px;">Введите тикер и запустите мониторинг</div>';
+                return;
+            }
+            
+            const symbol = ticker.toUpperCase() + 'USDT';
+            const expression = `BINANCE:${symbol}.P / BYBIT:${symbol}.P`;
+            
+            currentTicker = symbol;
+            
+            document.getElementById('tradingview-chart').innerHTML = '';
+            
+            new TradingView.widget({
+                "container_id": "tradingview-chart",
+                "width": "100%",
+                "height": "100%",
+                "symbol": expression,
+                "interval": currentChartInterval,
+                "timezone": "exchange",
+                "theme": "dark",
+                "style": "1",
+                "locale": "ru",
+                "toolbar_bg": "#0d1117",
+                "enable_publishing": false,
+                "allow_symbol_change": false,
+                "hide_side_toolbar": false,
+                "details": true,
+                "studies": [
+                    "MASimple@tv-basicstudies",
+                    "Volume@tv-basicstudies"
+                ],
+                "show_popup_button": true,
+                "popup_width": "1000",
+                "popup_height": "650"
+            });
+        }
+
+        // Функция для открытия в TradingView
+        function openTradingView() {
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            if (!ticker) {
+                alert('Введите тикер для открытия графика!');
+                return;
+            }
+            
+            const symbol = ticker + 'USDT';
+            const expression = `BINANCE:${symbol}.P / BYBIT:${symbol}.P`;
+            const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(expression)}&interval=${currentChartInterval}`;
+            
+            window.open(url, '_blank');
+        }
+
+        // Навигация по секциям
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            if (element) {
+                const headerHeight = document.querySelector('.header-container').offsetHeight;
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerHeight - 20;
+                
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+                
+                document.querySelectorAll('.floating-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            }
+        }
+
+        // Функция для перехода на главный сайт
+        function goHome() {
+            window.location.href = 'https://artofskill.github.io/';
+        }
+
+        // Отслеживание скролла
+        window.addEventListener('scroll', function() {
+            const scrollPosition = window.scrollY + 200;
+            
+            const liveSection = document.getElementById('live-blocks');
+            const historySection = document.getElementById('history-spread');
+            const tvSection = document.getElementById('tradingview-chart-section');
+            
+            if (!liveSection || !historySection || !tvSection) return;
+            
+            const liveOffset = liveSection.offsetTop;
+            const historyOffset = historySection.offsetTop;
+            const tvOffset = tvSection.offsetTop;
+            
+            let currentSection = 'live-blocks';
+            if (scrollPosition >= tvOffset) {
+                currentSection = 'tradingview-chart-section';
+            } else if (scrollPosition >= historyOffset) {
+                currentSection = 'history-spread';
+            }
+            
+            document.querySelectorAll('.floating-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (currentSection === 'live-blocks') {
+                document.querySelector('.floating-btn.live').classList.add('active');
+            } else if (currentSection === 'history-spread') {
+                document.querySelector('.floating-btn.history').classList.add('active');
+            } else if (currentSection === 'tradingview-chart-section') {
+                document.querySelector('.floating-btn.tradingview').classList.add('active');
+            }
+        });
+
+        async function syncNTPTime() {
+            try {
+                const start = Date.now();
+                const response = await fetch('https://worldtimeapi.org/api/ip');
+                const data = await response.json();
+                const end = Date.now();
+                
+                const serverTime = new Date(data.utc_datetime).getTime();
+                const rtt = end - start;
+                ntpOffset = serverTime - start - (rtt / 2);
+                
+                console.log('NTP синхронизация выполнена. Коррекция: ' + ntpOffset + 'ms');
+                updateNTPClock();
+                
+                const refreshBtn = document.querySelector('.refresh-btn');
+                const originalText = refreshBtn.textContent;
+                refreshBtn.textContent = '✓ Синхронизировано!';
+                refreshBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+                
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.style.background = 'transparent';
+                }, 2000);
+            } catch (error) {
+                console.error('Ошибка NTP синхронизации:', error);
+                
+                const refreshBtn = document.querySelector('.refresh-btn');
+                const originalText = refreshBtn.textContent;
+                refreshBtn.textContent = '✗ Ошибка!';
+                refreshBtn.style.background = 'linear-gradient(90deg, #ff7b72, #ff9999)';
+                
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.style.background = 'transparent';
+                }, 2000);
+            }
+        }
+
+        function getNTPTime() {
+            return new Date(Date.now() + ntpOffset);
+        }
+
+        function updateNTPClock() {
+            const now = getNTPTime();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('ntp-clock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Тиканье за 10 секунд до фандинга
+        let lastTickSecond = -1;
+
+        function playTick() {
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.4, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.08);
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.08);
+        }
+
+        // Функция для обновления таймера фандинга
+        function updateFundingTimer(nextFundingTime, fundingSpread) {
+            const now = Date.now();
+            const timeLeft = nextFundingTime - now;
+            
+            if (timeLeft <= 0) {
+                document.getElementById('funding-timer').style.display = 'none';
+                fundingTimerActive = false;
+                if (fundingTimerInterval) {
+                    clearInterval(fundingTimerInterval);
+                }
+                return;
+            }
+            
+            const hours = Math.floor(timeLeft / 3600000);
+            const minutes = Math.floor((timeLeft % 3600000) / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            const totalSeconds = Math.floor(timeLeft / 1000);
+
+            if (totalSeconds <= 10 && totalSeconds > 0 && totalSeconds !== lastTickSecond) {
+                lastTickSecond = totalSeconds;
+                playTick();
+            }
+            if (totalSeconds > 10) {
+                lastTickSecond = -1;
+            }
+            
+            const timerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 3600000) {
+                const timerElement = document.getElementById('funding-timer');
+                timerElement.textContent = `Фандинг через: ${timerText}`;
+                timerElement.style.display = 'block';
+                
+                if (fundingSpread !== currentTimerFundingSpread) {
+                    currentTimerFundingSpread = fundingSpread;
+                    
+                    if (fundingSpread >= 0) {
+                        timerElement.className = 'funding-timer green';
+                    } else {
+                        timerElement.className = 'funding-timer red';
+                    }
+                }
+                
+                fundingTimerActive = true;
+                
+                if (!fundingTimerInterval) {
+                    fundingTimerInterval = setInterval(() => {
+                        updateFundingTimer(nextFundingTime, currentTimerFundingSpread);
+                    }, 1000);
+                }
+            } else {
+                document.getElementById('funding-timer').style.display = 'none';
+                fundingTimerActive = false;
+                if (fundingTimerInterval) {
+                    clearInterval(fundingTimerInterval);
+                    fundingTimerInterval = null;
+                }
+            }
+        }
+
+        // Синхронизация при загрузке и каждые 5 минут
+        syncNTPTime();
+        setInterval(syncNTPTime, 300000);
+        setInterval(updateNTPClock, 1000);
+        
+        // Автоматическое обновление времени и фандинга
+        function autoUpdateData() {
+            if (monitorActive) {
+                // Обновляем время
+                updateNTPClock();
+                
+                // Обновляем фандинг таймер если он активен
+                if (fundingTimerActive && nextFundingTime > 0) {
+                    updateFundingTimer(nextFundingTime, currentFundingSpread);
+                }
+            }
+        }
+        
+        // Обновляем каждую секунду
+        setInterval(autoUpdateData, 1000);
+
+        // Обновленная функция для форматирования времени в 00:00:00
+        function msToTime(ms) {
+            if (ms <= 0) return "00:00:00";
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Функция для расчета размера позиции в USDT
+        function setPositionUsdt(usdt) {
+            document.getElementById('position-usdt-input').value = usdt;
+            calcLotsFromUsdt();
+        }
+
+        function calcLotsFromUsdt() {
+            const usdt = parseFloat(document.getElementById('position-usdt-input').value);
+            const shortPrice = parseFloat(document.getElementById('short-price').value);
+            if (usdt && shortPrice) {
+                const lots = usdt / shortPrice;
+                document.getElementById('position-size').value = lots.toFixed(6);
+            } else {
+                document.getElementById('position-size').value = '';
+            }
+            updatePositionUsdt();
+        }
+
+        function fillCurrentPrices() {
+            if (!lastPrices.bybit || !lastPrices.binance) {
+                alert('Сначала запусти мониторинг — цены ещё не загружены');
+                return;
+            }
+            const longExchange = document.getElementById('long-exchange').value;
+            const shortExchange = document.getElementById('short-exchange').value;
+            document.getElementById('long-price').value = lastPrices[longExchange];
+            document.getElementById('short-price').value = lastPrices[shortExchange];
+            updatePositionUsdt();
+        }
+
+        function updatePositionUsdt() {
+            const positionSize = parseFloat(document.getElementById('position-size').value);
+            const shortPrice = parseFloat(document.getElementById('short-price').value);
+            const longPrice = parseFloat(document.getElementById('long-price').value);
+            
+            if (positionSize && shortPrice) {
+                const positionUsdt = positionSize * shortPrice;
+                document.getElementById('position-usdt-display').innerHTML = 
+                    `Размер в USDT: <strong>${positionUsdt.toFixed(2)} USDT</strong>`;
+            } else {
+                document.getElementById('position-usdt-display').innerHTML = 
+                    'Размер в USDT: -';
+            }
+        }
+
+        // Обработчик изменения цен
+        document.getElementById('short-price').addEventListener('input', function() {
+            calcLotsFromUsdt();
+            updatePositionUsdt();
+        });
+        document.getElementById('long-price').addEventListener('input', updatePositionUsdt);
+
+        // Функция для расчета комиссии за позиции
+        function calculateCommission() {
+            const positionSize = parseFloat(document.getElementById('position-size').value);
+            const longPrice = parseFloat(document.getElementById('long-price').value);
+            const shortPrice = parseFloat(document.getElementById('short-price').value);
+            
+            if (!positionSize || !longPrice || !shortPrice) {
+                return null;
+            }
+            
+            const longPositionUsdt = positionSize * longPrice;
+            const shortPositionUsdt = positionSize * shortPrice;
+            const totalPositionUsdt = longPositionUsdt + shortPositionUsdt;
+             const commissionUsdt = totalPositionUsdt * 0.00145;
+            
+            return {
+                longPositionUsdt: longPositionUsdt,
+                shortPositionUsdt: shortPositionUsdt,
+                totalPositionUsdt: totalPositionUsdt,
+                commissionUsdt: commissionUsdt
+            };
+        }
+
+        // Функция для расчета фандинга в USDT
+        function calculateFundingUsdt(fundingRatePercent, exchange, positionSize) {
+            if (!positionSize || positionSize <= 0) return 0;
+            
+            let price = 0;
+            if (exchange === 'long') {
+                price = parseFloat(document.getElementById('long-price').value);
+            } else if (exchange === 'short') {
+                price = parseFloat(document.getElementById('short-price').value);
+            }
+            
+            if (!price) return 0;
+            
+            const positionUsdt = positionSize * price;
+            const fundingUsdt = (fundingRatePercent * positionUsdt) / 100;
+            
+            return fundingUsdt;
+        }
+
+        let audioContext;
+        function playBeep(freq = 600, duration = 300) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioContext.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const gain = audioContext.createGain();
+            gain.gain.value = 0.3;
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.start();
+            osc.stop(audioContext.currentTime + duration/1000);
+        }
+        function playLow() { playBeep(400, 500); setTimeout(() => playBeep(400, 500), 600); }
+        function playHigh() { playBeep(900, 200); setTimeout(() => playBeep(900, 200), 300); setTimeout(() => playBeep(900, 200), 600); }
+
+        let monitorActive = false;
+        let lastPrices = { bybit: null, binance: null };
+        let myLongPrice = 0;
+        let myShortPrice = 0;
+        let myLongExchange = 'bybit';
+        let myShortExchange = 'binance';
+        let mySpread = 0;
+        let positionSize = 0;
+        let currentFundingSpread = 0;
+        let nextFundingTime = 0;
+
+        async function getPrices(symbol) {
+            try {
+                const [bybitResp, binanceResp] = await Promise.all([
+                    fetch('https://api.bybit.com/v5/market/tickers?category=linear'),
+                    fetch('https://fapi.binance.com/fapi/v1/premiumIndex')
+                ]);
+                const bybitData = await bybitResp.json();
+                const binanceData = await binanceResp.json();
+
+                const bybitTicker = bybitData.result.list.find(t => t.symbol === symbol);
+                const binanceTicker = binanceData.find(t => t.symbol === symbol);
+
+                if (!bybitTicker || !binanceTicker) return null;
+
+                return {
+                    bybitPrice: parseFloat(bybitTicker.markPrice || bybitTicker.lastPrice),
+                    binancePrice: parseFloat(binanceTicker.markPrice),
+                    bybitRate: parseFloat(bybitTicker.fundingRate) * 100,
+                    binanceRate: parseFloat(binanceTicker.lastFundingRate) * 100,
+                    bybitNext: parseInt(bybitTicker.nextFundingTime),
+                    binanceNext: parseInt(binanceTicker.nextFundingTime)
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function getInterval(nextTime) {
+            const now = Date.now();
+            const diff = (nextTime - now) / 3600000;
+            if (Math.abs(diff - 1) < 0.5 || Math.abs(diff - 25) < 0.5) return "1-часовой";
+            if (Math.abs(diff - 4) < 0.5 || Math.abs(diff - 28) < 0.5) return "4-часовой";
+            return "8-часовой";
+        }
+
+        // Функция для получения текущей цены по выбранной бирже
+        function getCurrentPrice(exchange) {
+            if (exchange === 'bybit') {
+                return lastPrices.bybit;
+            } else if (exchange === 'binance') {
+                return lastPrices.binance;
+            }
+            return null;
+        }
+
+        // Функция для получения данных фандинга по выбранной бирже
+        function getFundingData(exchange, data) {
+            if (exchange === 'bybit') {
+                return {
+                    rate: data.bybitRate,
+                    nextTime: data.bybitNext,
+                    time: msToTime(data.bybitNext - Date.now()),
+                    interval: getInterval(data.bybitNext)
+                };
+            } else if (exchange === 'binance') {
+                return {
+                    rate: data.binanceRate,
+                    nextTime: data.binanceNext,
+                    time: msToTime(data.binanceNext - Date.now()),
+                    interval: getInterval(data.binanceNext)
+                };
+            }
+            return null;
+        }
+
+        // Функция для расчета PnL с учетом выбранных бирж
+        function calculatePnL() {
+            if (!myLongPrice || !myShortPrice || !lastPrices.bybit || !lastPrices.binance) {
+                return null;
+            }
+
+            const longCurrentPrice = getCurrentPrice(myLongExchange);
+            const shortCurrentPrice = getCurrentPrice(myShortExchange);
+            
+            if (!longCurrentPrice || !shortCurrentPrice) return null;
+
+            const longPnLPercent = ((longCurrentPrice - myLongPrice) / myLongPrice * 100).toFixed(3);
+            const shortPnLPercent = ((myShortPrice - shortCurrentPrice) / myShortPrice * 100).toFixed(3);
+            
+            let longPnLUsdt = 0;
+            let shortPnLUsdt = 0;
+            let totalPnLUsdt = 0;
+            
+            if (positionSize > 0) {
+                longPnLUsdt = (longCurrentPrice - myLongPrice) * positionSize;
+                shortPnLUsdt = (myShortPrice - shortCurrentPrice) * positionSize;
+                totalPnLUsdt = longPnLUsdt + shortPnLUsdt;
+            }
+            
+            return {
+                longPnLPercent: longPnLPercent,
+                shortPnLPercent: shortPnLPercent,
+                longCurrentPrice: longCurrentPrice,
+                shortCurrentPrice: shortCurrentPrice,
+                longPnLUsdt: longPnLUsdt,
+                shortPnLUsdt: shortPnLUsdt,
+                totalPnLUsdt: totalPnLUsdt
+            };
+        }
+
+        // Обновленная функция для отображения позиции с PnL и комиссией
+        function updatePositionDisplay() {
+            if (!myLongPrice || !myShortPrice) {
+                document.getElementById('my-result').innerHTML = 'Введи обе цены';
+                return;
+            }
+
+            const pnlData = calculatePnL();
+            const commissionData = calculateCommission();
+            
+            let pnlHtml = '';
+            if (pnlData) {
+                pnlHtml = `
+                    <div class="pnl-section">
+                        <div class="pnl-line">
+                            <span class="pnl-label">Long PnL (${myLongExchange.toUpperCase()}):</span>
+                            <span class="pnl-value" style="color:${pnlData.longPnLPercent >= 0 ? '#56d364' : '#ff7b72'}">
+                                ${pnlData.longPnLPercent >= 0 ? '+' : ''}${pnlData.longPnLPercent}%
+                            </span>
+                        </div>
+                        <div class="pnl-line">
+                            <span class="pnl-label">Short PnL (${myShortExchange.toUpperCase()}):</span>
+                            <span class="pnl-value" style="color:${pnlData.shortPnLPercent >= 0 ? '#56d364' : '#ff7b72'}">
+                                ${pnlData.shortPnLPercent >= 0 ? '+' : ''}${pnlData.shortPnLPercent}%
+                            </span>
+                        </div>
+                        <div class="pnl-line">
+                            <span class="pnl-label">Текущая цена Long:</span>
+                            <span class="pnl-value">${pnlData.longCurrentPrice.toFixed(6)}</span>
+                        </div>
+                        <div class="pnl-line">
+                            <span class="pnl-label">Текущая цена Short:</span>
+                            <span class="pnl-value">${pnlData.shortCurrentPrice.toFixed(6)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let commissionHtml = '';
+            if (commissionData) {
+                commissionHtml = `
+                    <div class="commission-section">
+                        <div class="commission-line">
+                            <span class="commission-label">Комиссия за позиции:</span>
+                            <span class="commission-value">${commissionData.commissionUsdt.toFixed(2)} USDT</span>
+                        </div>
+                        <div style="font-size: 0.9em; color: #8b949e; margin-top: 5px;">
+                            Long: ${commissionData.longPositionUsdt.toFixed(2)} USDT + Short: ${commissionData.shortPositionUsdt.toFixed(2)} USDT = ${commissionData.totalPositionUsdt.toFixed(2)} USDT × 0.145%
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('my-result').innerHTML = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div>Long (${myLongExchange.toUpperCase()}) <strong>${myLongPrice}</strong></div>
+                    <div>Short (${myShortExchange.toUpperCase()}) <strong>${myShortPrice}</strong></div>
+                </div>
+                <div class="my-spread-num" style="color:${mySpread > 0 ? '#56d364' : '#ff7b72'}">
+                    ${mySpread > 0 ? '+' : ''}${mySpread}%
+                </div>
+                ${pnlHtml}
+                ${commissionHtml}
+            `;
+            
+            updatePositionUsdt();
+        }
+
+        // Функция для расчета рыночного спреда между выбранными биржами
+        function calculateMarketSpread() {
+            if (!lastPrices.bybit || !lastPrices.binance) return null;
+            
+            const longCurrentPrice = getCurrentPrice(myLongExchange);
+            const shortCurrentPrice = getCurrentPrice(myShortExchange);
+            
+            if (!longCurrentPrice || !shortCurrentPrice) return null;
+            
+            const marketSpread = ((shortCurrentPrice - longCurrentPrice) / longCurrentPrice * 100).toFixed(3);
+            return marketSpread;
+        }
+
+        // Обновленная функция для обновления Funding Info
+        function updateFundingInfo(data) {
+            if (!data) return;
+            
+            const longFunding = getFundingData(myLongExchange, data);
+            const shortFunding = getFundingData(myShortExchange, data);
+            
+            if (!longFunding || !shortFunding) return;
+            
+            const fundingSpread = (shortFunding.rate - longFunding.rate).toFixed(4);
+            currentFundingSpread = parseFloat(fundingSpread);
+            
+            nextFundingTime = Math.min(longFunding.nextTime, shortFunding.nextTime);
+            updateFundingTimer(nextFundingTime, currentFundingSpread);
+            
+            const longFundingUsdt = calculateFundingUsdt(longFunding.rate, 'long', positionSize);
+            const shortFundingUsdt = calculateFundingUsdt(shortFunding.rate, 'short', positionSize);
+            
+            const longFundingDisplayUsdt = longFundingUsdt * -1;
+            const shortFundingDisplayUsdt = shortFundingUsdt;
+            const totalFundingUsdt = shortFundingUsdt - longFundingUsdt;
+            
+            document.getElementById('funding-result').innerHTML = `
+                <div class="funding-line" style="display: flex; justify-content: space-between; margin: 10px 0;">
+                    <span style="color: var(--accent2); font-weight: 600;">Long funding (${myLongExchange.toUpperCase()}):</span>
+                    <div style="text-align: right;">
+                        <span style="color: ${longFunding.rate >= 0 ? '#56d364' : '#ff7b72'}; font-weight: bold;">
+                            ${longFunding.rate.toFixed(5)}%
+                        </span>
+                        ${positionSize > 0 ? `<div style="font-size: 0.9em; color: ${longFundingDisplayUsdt >= 0 ? '#56d364' : '#ff7b72'}">${longFundingDisplayUsdt >= 0 ? '+' : ''}${longFundingDisplayUsdt.toFixed(4)} USDT</div>` : ''}
+                    </div>
+                </div>
+                <div class="funding-line" style="display: flex; justify-content: space-between; margin: 10px 0;">
+                    <span style="color: var(--accent2); font-weight: 600;">→ через</span>
+                    <span style="font-weight: bold;">${longFunding.time} (${longFunding.interval})</span>
+                </div>
+                <div class="funding-line" style="display: flex; justify-content: space-between; margin: 10px 0;">
+                    <span style="color: var(--accent2); font-weight: 600;">Short funding (${myShortExchange.toUpperCase()}):</span>
+                    <div style="text-align: right;">
+                        <span style="color: ${shortFunding.rate >= 0 ? '#56d364' : '#ff7b72'}; font-weight: bold;">
+                            ${shortFunding.rate.toFixed(5)}%
+                        </span>
+                        ${positionSize > 0 ? `<div style="font-size: 0.9em; color: ${shortFundingDisplayUsdt >= 0 ? '#56d364' : '#ff7b72'}">${shortFundingDisplayUsdt >= 0 ? '+' : ''}${shortFundingDisplayUsdt.toFixed(4)} USDT</div>` : ''}
+                    </div>
+                </div>
+                <div class="funding-line" style="display: flex; justify-content: space-between; margin: 10px 0;">
+                    <span style="color: var(--accent2); font-weight: 600;">→ через</span>
+                    <span style="font-weight: bold;">${shortFunding.time} (${shortFunding.interval})</span>
+                </div>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">
+                        Доходность фандинга (short - long): 
+                        <span style="color:${fundingSpread > 0 ? '#56d364' : '#ff7b72'}">
+                            ${fundingSpread > 0 ? '+' : ''}${fundingSpread}%
+                        </span>
+                    </div>
+                    ${positionSize > 0 ? `<div style="font-size: 0.95em; color: ${totalFundingUsdt >= 0 ? '#56d364' : '#ff7b72'}">${totalFundingUsdt >= 0 ? '+' : ''}${totalFundingUsdt.toFixed(4)} USDT</div>` : ''}
+                </div>
+            `;
+        }
+
+        async function monitorLoop() {
+            if (!monitorActive) return;
+
+            const symbol = document.getElementById('ticker').value.trim().toUpperCase() + 'USDT';
+            const minAlert = parseFloat(document.getElementById('min-alert').value) || 0;
+            const maxAlert = parseFloat(document.getElementById('max-alert').value) || 999;
+
+            const data = await getPrices(symbol);
+            if (!data) {
+                document.getElementById('result').innerHTML = `<span style="color:#ff7b72">Пара не найдена</span>`;
+                setTimeout(monitorLoop, 3000);
+                return;
+            }
+
+            if (data.bybitPrice !== lastPrices.bybit || data.binancePrice !== lastPrices.binance) {
+                lastPrices = { bybit: data.bybitPrice, binance: data.binancePrice };
+
+                const diff = ((data.bybitPrice - data.binancePrice) / data.binancePrice * 100);
+                const absDiff = Math.abs(diff).toFixed(3);
+                const sign = diff > 0 ? '' : '-';
+                
+                if (isChartRecording) {
+                    updateChart(diff);
+                }
+
+                updatePageTitle(symbol.replace('USDT', ''), parseFloat(absDiff));
+
+                let extra = '';
+                let className = '';
+
+                if (absDiff <= minAlert && minAlert > 0) {
+                    playLow();
+                    className = 'alert-min';
+                    extra = '<br>СПРЕД ≤ МИНИМУМ!';
+                }
+                if (absDiff >= maxAlert) {
+                    playHigh();
+                    className = 'alert-max';
+                    extra = '<br>СПРЕД ≥ МАКСИМУМ!';
+                }
+
+                document.getElementById('result').className = 'content ' + className;
+                document.getElementById('result').innerHTML = `
+                    <div class="ticker-big">${symbol.replace('USDT','')}</div>
+                    <div style="text-align: center;">
+                        <div>Bybit: <strong>${data.bybitPrice.toFixed(6)}</strong></div>
+                        <div>Binance: <strong>${data.binancePrice.toFixed(6)}</strong></div>
+                    </div>
+                    <div class="spread-big" style="color:${diff >= 0 ? '#56d364' : '#ff7b72'}">
+                        ${sign}${absDiff}%
+                    </div>
+                    ${extra}
+                `;
+
+                updateFundingInfo(data);
+                updatePositionDisplay();
+                updateProfit();
+            }
+
+            setTimeout(monitorLoop, 800);
+        }
+
+        function calcMySpread() {
+            const longPrice = parseFloat(document.getElementById('long-price').value);
+            const shortPrice = parseFloat(document.getElementById('short-price').value);
+            const longExchange = document.getElementById('long-exchange').value;
+            const shortExchange = document.getElementById('short-exchange').value;
+            const size = parseFloat(document.getElementById('position-size').value);
+
+            if (!longPrice || !shortPrice) {
+                document.getElementById('my-result').innerHTML = 'Введи обе цены';
+                mySpread = 0;
+                updateProfit();
+                return;
+            }
+
+            myLongPrice = longPrice;
+            myShortPrice = shortPrice;
+            myLongExchange = longExchange;
+            myShortExchange = shortExchange;
+            positionSize = size || 0;
+            
+            mySpread = ((shortPrice - longPrice) / longPrice * 100).toFixed(3);
+
+            updatePositionDisplay();
+            updateProfit();
+        }
+
+        // Функция для генерации QR кода
+        function generateQR() {
+            const longExchange = document.getElementById('long-exchange').value;
+            const shortExchange = document.getElementById('short-exchange').value;
+            const longPrice = document.getElementById('long-price').value;
+            const shortPrice = document.getElementById('short-price').value;
+            const positionSize = document.getElementById('position-size').value;
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            
+            // Данные из LIVE Spread
+            const minAlert = document.getElementById('min-alert').value;
+            const maxAlert = document.getElementById('max-alert').value;
+            
+            // Текущие рыночные цены (если мониторинг активен)
+            const currentBybitPrice = lastPrices.bybit;
+            const currentBinancePrice = lastPrices.binance;
+            const currentSpread = lastPrices.bybit && lastPrices.binance ?
+                ((lastPrices.bybit - lastPrices.binance) / lastPrices.binance * 100).toFixed(3) : null;
+
+            // Проверяем, что заполнены обязательные поля
+            if (!longPrice || !shortPrice) {
+                alert('Заполните цены входа для генерации QR кода');
+                return;
+            }
+
+            // Создаем URL с параметрами позиции
+            const baseUrl = window.location.origin + window.location.pathname;
+            const params = new URLSearchParams({
+                longExchange: longExchange,
+                shortExchange: shortExchange,
+                longPrice: longPrice,
+                shortPrice: shortPrice,
+                positionSize: positionSize || '',
+                timestamp: Date.now()
+            });
+
+            // Добавляем данные из LIVE Spread если они есть
+            if (ticker) {
+                params.set('ticker', ticker);
+            }
+            
+            if (minAlert && minAlert !== '0.80') {
+                params.set('minAlert', minAlert);
+            }
+            
+            if (maxAlert && maxAlert !== '2.00') {
+                params.set('maxAlert', maxAlert);
+            }
+            
+            // Добавляем текущие рыночные данные если мониторинг активен
+            if (monitorActive && currentBybitPrice && currentBinancePrice) {
+                params.set('currentBybit', currentBybitPrice);
+                params.set('currentBinance', currentBinancePrice);
+                params.set('currentSpread', currentSpread);
+                params.set('monitorActive', 'true');
+            }
+
+            const shareUrl = `${baseUrl}?${params.toString()}`;
+            
+            // Очищаем содержимое модального окна полностью
+            const qrModalContent = document.getElementById('qr-modal-content');
+            qrModalContent.innerHTML = '';
+            
+            // Создаем заголовок
+            const title = document.createElement('h3');
+            title.textContent = '📱 QR код позиции';
+            title.style.cssText = 'color:var(--accent); margin-bottom:20px; font-size:1.5em;';
+            qrModalContent.appendChild(title);
+            
+            // Создаем контейнер для QR кода
+            const qrContainer = document.createElement('div');
+            qrContainer.id = 'qr-code-container';
+            qrContainer.style.cssText = 'margin:20px 0; display:flex; justify-content:center;';
+            qrModalContent.appendChild(qrContainer);
+            
+            // Генерируем QR код
+            try {
+                if (typeof QRCode === 'undefined') {
+                    throw new Error('QRCode библиотека не загружена');
+                }
+                
+                new QRCode(qrContainer, {
+                    text: shareUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (error) {
+                console.error('Ошибка генерации QR:', error);
+                qrContainer.innerHTML = `
+                    <div style="color:#ff7b72; padding:20px; text-align:center;">
+                        Ошибка генерации QR: ${error.message}<br>
+                        <div style="margin-top:10px; font-size:0.9em; color:#8b949e;">
+                            URL для копирования:<br>
+                            <code style="word-break:break-all; display:inline-block; margin-top:5px;">${shareUrl}</code>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Создаем блок информации
+            const info = document.createElement('div');
+            info.style.cssText = 'color:var(--accent2); font-size:0.9em; margin-bottom:20px; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px;';
+            info.innerHTML = `Содержит:<br>
+                • Позицию (Long/Short цены)<br>
+                • Размер позиции<br>
+                • Текущий тикер и алерты<br>
+                ${monitorActive && currentBybitPrice && currentBinancePrice ? '• Текущие рыночные цены' : ''}`;
+            qrModalContent.appendChild(info);
+            
+            // Создаем блок для URL
+            const urlDisplay = document.createElement('div');
+            urlDisplay.style.cssText = 'margin-top:15px; font-size:0.8em; color:#8b949e; word-break:break-all; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;';
+            urlDisplay.innerHTML = `<strong>URL:</strong><br><code>${shareUrl}</code>`;
+            qrModalContent.appendChild(urlDisplay);
+            
+            // Создаем кнопку копирования
+            const copyBtn = document.createElement('button');
+            copyBtn.innerHTML = '📋 Скопировать ссылку';
+            copyBtn.style.cssText = `
+                background: linear-gradient(90deg, #7ffe94, #a8ffbb);
+                color: #000;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                margin-top: 15px;
+                cursor: pointer;
+                font-size: 0.9em;
+                font-weight: bold;
+                transition: all 0.3s;
+                width: 100%;
+            `;
+            copyBtn.onclick = function() {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✓ Скопировано!';
+                    copyBtn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+                    
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                        copyBtn.style.background = 'linear-gradient(90deg, #7ffe94, #a8ffbb)';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Ошибка копирования:', err);
+                    copyBtn.textContent = '❌ Ошибка';
+                    copyBtn.style.background = 'linear-gradient(90deg, #ff7b72, #ff9999)';
+                    
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 Скопировать ссылку';
+                        copyBtn.style.background = 'linear-gradient(90deg, #7ffe94, #a8ffbb)';
+                    }, 2000);
+                });
+            };
+            qrModalContent.appendChild(copyBtn);
+            
+            // Создаем кнопку закрытия
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = 'Закрыть';
+            closeBtn.style.cssText = `
+                background: linear-gradient(90deg, var(--accent), #79c0ff);
+                color: #000;
+                border: none;
+                padding: 12px 40px;
+                border-radius: 12px;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 1.1em;
+                margin-top: 20px;
+                width: 100%;
+            `;
+            closeBtn.onclick = closeQR;
+            qrModalContent.appendChild(closeBtn);
+            
+            // Показываем модальное окно
+            document.getElementById('qr-modal').style.display = 'flex';
+        }
+
+        // Функция закрытия QR модального окна
+        function closeQR() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+
+        // Функция загрузки позиции из URL параметров
+        function loadPositionFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            console.log('URL параметры:', Object.fromEntries(urlParams.entries()));
+            
+            // Загружаем данные из My Position
+            let loadedPosition = false;
+            
+            if (urlParams.has('longExchange')) {
+                document.getElementById('long-exchange').value = urlParams.get('longExchange');
+                loadedPosition = true;
+            }
+            
+            if (urlParams.has('shortExchange')) {
+                document.getElementById('short-exchange').value = urlParams.get('shortExchange');
+                loadedPosition = true;
+            }
+            
+            if (urlParams.has('longPrice')) {
+                document.getElementById('long-price').value = urlParams.get('longPrice');
+                loadedPosition = true;
+            }
+            
+            if (urlParams.has('shortPrice')) {
+                document.getElementById('short-price').value = urlParams.get('shortPrice');
+                loadedPosition = true;
+            }
+            
+            if (urlParams.has('positionSize')) {
+                document.getElementById('position-size').value = urlParams.get('positionSize');
+                loadedPosition = true;
+            }
+            
+            // Загружаем данные из LIVE Spread
+            if (urlParams.has('ticker')) {
+                document.getElementById('ticker').value = urlParams.get('ticker');
+            }
+            
+            if (urlParams.has('minAlert')) {
+                document.getElementById('min-alert').value = urlParams.get('minAlert');
+            }
+            
+            if (urlParams.has('maxAlert')) {
+                document.getElementById('max-alert').value = urlParams.get('maxAlert');
+            }
+            
+            // Если есть параметры цены, автоматически рассчитываем спред
+            if (urlParams.has('longPrice') && urlParams.has('shortPrice')) {
+                setTimeout(() => {
+                    calcMySpread();
+                    updatePositionUsdt();
+                    
+                    // Показываем уведомление о загрузке
+                    if (loadedPosition) {
+                        showNotification('Позиция загружена из QR кода!');
+                    }
+                }, 500);
+            }
+        }
+
+        // Функция показа уведомления
+        function showNotification(message, type = 'info') {
+            // Удаляем предыдущие уведомления
+            const oldNotifications = document.querySelectorAll('.custom-notification');
+            oldNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'custom-notification';
+            notification.textContent = message;
+            
+            // Настройка цвета в зависимости от типа
+            let bgColor, textColor;
+            switch(type) {
+                case 'success':
+                    bgColor = 'linear-gradient(90deg, #56d364, #7ffe94)';
+                    textColor = '#000';
+                    break;
+                case 'error':
+                    bgColor = 'linear-gradient(90deg, #ff7b72, #ff9999)';
+                    textColor = '#000';
+                    break;
+                case 'info':
+                default:
+                    bgColor = 'linear-gradient(90deg, #58a6ff, #79c0ff)';
+                    textColor = '#000';
+                    break;
+            }
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: ${textColor};
+                padding: 15px 25px;
+                border-radius: 10px;
+                font-weight: bold;
+                z-index: 9999;
+                animation: slideInRight 0.3s ease-out;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+                max-width: 300px;
+                word-break: break-word;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-out forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Добавить анимации для уведомления
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Функция копирования URL
+        function copyShareUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const baseUrl = 'https://artofskill.github.io/spread_alert.html';
+            const shareUrl = `${baseUrl}?${urlParams.toString()}`;
+            
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Скопировано!';
+                btn.style.background = 'linear-gradient(90deg, #56d364, #7ffe94)';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'var(--bg)';
+                }, 2000);
+            });
+        }
+
+        function updateProfit() {
+            if (mySpread === 0) {
+                document.getElementById('profit-result').innerHTML = 'Введи свою позицию';
+                return;
+            }
+
+            const marketSpread = calculateMarketSpread();
+            
+            if (!marketSpread) {
+                document.getElementById('profit-result').innerHTML = 'Нет данных по ценам';
+                return;
+            }
+
+            const profit = (mySpread - marketSpread).toFixed(3);
+            const color = profit > 0 ? '#56d364' : '#ff7b72';
+
+            const pnlData = calculatePnL();
+            let usdtHtml = '';
+            
+            if (pnlData && positionSize > 0) {
+                usdtHtml = `
+                    <div class="pnl-section">
+                        <div class="pnl-line">
+                            <span class="pnl-label">Long PnL (USDT):</span>
+                            <span class="pnl-value" style="color:${pnlData.longPnLUsdt >= 0 ? '#56d364' : '#ff7b72'}">
+                                ${pnlData.longPnLUsdt >= 0 ? '+' : ''}${pnlData.longPnLUsdt.toFixed(2)} USDT
+                            </span>
+                        </div>
+                        <div class="pnl-line">
+                            <span class="pnl-label">Short PnL (USDT):</span>
+                            <span class="pnl-value" style="color:${pnlData.shortPnLUsdt >= 0 ? '#56d364' : '#ff7b72'}">
+                                ${pnlData.shortPnLUsdt >= 0 ? '+' : ''}${pnlData.shortPnLUsdt.toFixed(2)} USDT
+                            </span>
+                        </div>
+                        <div class="pnl-line">
+                            <span class="pnl-label">Total PnL (USDT):</span>
+                            <span class="pnl-value" style="color:${pnlData.totalPnLUsdt >= 0 ? '#56d364' : '#ff7b72'}">
+                                ${pnlData.totalPnLUsdt >= 0 ? '+' : ''}${pnlData.totalPnLUsdt.toFixed(2)} USDT
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('profit-result').innerHTML = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div>Твой спред: <strong style="color:#7ffe94">${mySpread > 0 ? '+' : ''}${mySpread}%</strong></div>
+                    <div>Рыночный спред (${myLongExchange.toUpperCase()}→${myShortExchange.toUpperCase()}): <strong>${marketSpread > 0 ? '+' : ''}${marketSpread}%</strong></div>
+                </div>
+                <div class="current-profit-num" style="color:${color}; text-align: center;">
+                    ${profit > 0 ? '+' : ''}${profit}%
+                </div>
+                <div style="margin-top:10px; text-align: center;">
+                    ${profit > 0 ? 'Можно закрывать!' : 'Ждём схлопывания'}
+                </div>
+                ${usdtHtml}
+            `;
+        }
+
+        function startMonitoring() {
+            if (monitorActive) return;
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            if (!ticker) return alert('Введите тикер!');
+            monitorActive = true;
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('stop-btn').style.display = 'inline-block';
+            document.getElementById('result').innerHTML = 'Загрузка...';
+            document.getElementById('funding-result').innerHTML = 'Загрузка...';
+            
+            updatePageTitle(ticker);
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            lastPrices = { bybit: null, binance: null };
+            
+            loadTradingViewChart(ticker);
+            
+            monitorLoop();
+        }
+
+        function openHeatmap() {
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const coin = ticker ? ticker.replace('USDT', '').replace('PERP', '') : 'BTC';
+            window.open('https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + coin, '_blank');
+        }
+
+        function stopMonitoring() {
+            monitorActive = false;
+            document.getElementById('start-btn').style.display = 'inline-block';
+            document.getElementById('stop-btn').style.display = 'none';
+            document.getElementById('result').innerHTML = 'Остановлено';
+            document.getElementById('result').className = 'content';
+            document.getElementById('funding-result').innerHTML = 'Остановлено';
+            document.getElementById('profit-result').innerHTML = 'Мониторинг остановлен';
+            
+            document.title = 'Spread Alert';
+            
+            stopChartUpdates();
+            
+            document.getElementById('funding-timer').style.display = 'none';
+            fundingTimerActive = false;
+            if (fundingTimerInterval) {
+                clearInterval(fundingTimerInterval);
+                fundingTimerInterval = null;
+            }
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePositionUsdt();
+            initChart();
+            
+            // Загружаем позицию из URL параметров
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.toString()) {
+                loadPositionFromURL();
+            }
+            
+            // Если есть тикер в URL, запускаем мониторинг
+            if (urlParams.has('ticker') && !monitorActive) {
+                setTimeout(() => {
+                    if (document.getElementById('ticker').value.trim() !== '') {
+                        startMonitoring();
+                    }
+                }, 1000);
+            }
+            
+            document.getElementById('tradingview-chart').innerHTML =
+                '<div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #8b949e; text-align: center; padding: 20px;">' +
+                '<div>' +
+                '<div style="font-size: 1.5em; margin-bottom: 10px;">📈</div>' +
+                '<div style="font-weight: bold; margin-bottom: 5px;">График спреда между биржами</div>' +
+                '<div>Введите тикер и нажмите "СТАРТ"<br>или кнопку "Обновить график"</div>' +
+                '</div>' +
+                '</div>';
+            
+            document.querySelector('.floating-btn.live').classList.add('active');
+        });
+
+        // Закрытие модального окна при клике вне его
+        document.getElementById('qr-modal').addEventListener('click', function(e) {
+            if (e.target.id === 'qr-modal') {
+                closeQR();
+            }
+        });
+
+        // Закрытие по Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('qr-modal').style.display === 'flex') {
+                closeQR();
+            }
+        });
+
+        // Автоматическое обновление QR при изменении данных
+        document.getElementById('ticker').addEventListener('input', function() {
+            // Если QR окно открыто, обновляем его
+            if (document.getElementById('qr-modal').style.display === 'flex') {
+                setTimeout(generateQR, 100);
+            }
+        });
+
+        // Обновление при изменении позиции
+        ['long-price', 'short-price', 'position-size', 'long-exchange', 'short-exchange'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                if (document.getElementById('qr-modal').style.display === 'flex') {
+                    setTimeout(generateQR, 100);
+                }
+            });
+        });
+    </script>
+    
+    <!-- TradingView Widget -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    
+    <!-- Модальное окно QR кода -->
+    <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; justify-content:center; align-items:center; backdrop-filter: blur(5px);">
+        <div id="qr-modal-content" style="background:var(--card); padding:30px; border-radius:20px; text-align:center; max-width:500px; width:90%; border:2px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.7); max-height:90vh; overflow-y:auto;">
+            <!-- Содержимое будет генерироваться динамически -->
+        </div>
+    </div>
+</body>
+</html>

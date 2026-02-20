@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Депозит и Cложный процент</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Единые переменные как в index.html */
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --accent2: #ffa657;
+            --green: #56d364;
+            --border: #30363d;
+        }
+        
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: 24px;
+            padding: 35px 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            border: 2px solid var(--border);
+            flex: 1;
+            animation: slideUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            color: #000;
+            border: none;
+            padding: 16px 50px;
+            border-radius: 50px;
+            font-size: 1.4em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        }
+        
+        .refresh-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* Блок статистики */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin: 40px 0 60px;
+        }
+        
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: slideUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .stat:nth-child(1) { animation-delay: 0.1s; }
+        .stat:nth-child(2) { animation-delay: 0.2s; }
+        .stat:nth-child(3) { animation-delay: 0.3s; }
+        .stat:nth-child(4) { animation-delay: 0.4s; }
+        
+        .stat:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px rgba(88,166,255,0.3);
+        }
+        
+        .stat h3 {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 12px;
+            color: var(--accent2);
+        }
+        
+        .stat .value {
+            font-size: 2.2em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Главный прогресс-бар (До цели) */
+        .main-progress {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 40px 0;
+            border: 1px solid var(--border);
+            animation: slideUp 0.8s ease-out forwards 0.5s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .progress-label {
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--accent);
+        }
+        
+        .progress-bar {
+            height: 50px;
+            background: var(--bg);
+            border-radius: 25px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid var(--border);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            transition: width 1.5s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        /* Второй прогресс-бар (только для десктопа) */
+        .secondary-progress {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 30px 0;
+            border: 1px solid var(--border);
+            animation: slideUp 0.8s ease-out forwards 0.6s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        .secondary-progress .progress-label {
+            font-size: 1.4em;
+            color: var(--accent2);
+        }
+        
+        .secondary-progress .progress-bar {
+            height: 40px;
+        }
+        
+        .secondary-progress .progress-text {
+            font-size: 1.5em;
+        }
+        
+        /* Таблица (только для десктопа) */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 50px;
+            animation: slideUp 0.8s ease-out forwards 0.7s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        th, td {
+            padding: 14px 12px;
+            text-align: center;
+            font-size: 0.95em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        th {
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            color: #000;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        tr:hover {
+            background: rgba(88, 166, 255, 0.1);
+        }
+        
+        /* Лоадер */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 35, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #loader.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .loader-spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(0, 245, 255, 0.3);
+            border-top: 8px solid #00f5ff;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loader-text {
+            font-size: 1.6em;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn { 
+            from { opacity: 0; } 
+            to { opacity: 1; } 
+        }
+        
+        @keyframes slideUp { 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        }
+        
+        /* УЛУЧШЕННАЯ мобильная адаптация */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px 10px;
+            }
+            
+            h1 {
+                font-size: 2.2em;
+                margin-bottom: 25px;
+            }
+            
+            .container {
+                padding: 25px 15px;
+                border-radius: 20px;
+            }
+            
+            .header {
+                margin-bottom: 30px;
+            }
+            
+            .refresh-btn {
+                padding: 14px 30px;
+                font-size: 1.2em;
+                max-width: 250px;
+            }
+            
+            /* Статистика - 2 колонки на планшетах */
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                margin: 30px 0 40px;
+            }
+            
+            .stat {
+                padding: 20px 12px;
+                border-radius: 16px;
+            }
+            
+            .stat h3 {
+                font-size: 0.95em;
+                margin-bottom: 10px;
+            }
+            
+            .stat .value {
+                font-size: 1.6em;
+            }
+            
+            /* Прогресс бары - убираем второй прогресс на мобилках */
+            .main-progress {
+                padding: 20px;
+                margin: 30px 0;
+                border-radius: 16px;
+            }
+            
+            .secondary-progress {
+                display: none; /* Скрываем на мобильных */
+            }
+            
+            .progress-label {
+                font-size: 1.3em;
+                margin-bottom: 15px;
+            }
+            
+            .progress-bar {
+                height: 40px;
+            }
+            
+            .progress-text {
+                font-size: 1.4em;
+            }
+            
+            /* Скрываем таблицу на мобильных */
+            .table-wrapper {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 20px;
+            }
+            
+            .container {
+                padding: 20px 12px;
+                border-radius: 18px;
+            }
+            
+            .refresh-btn {
+                padding: 12px 25px;
+                font-size: 1.1em;
+                max-width: 100%;
+            }
+            
+            /* Статистика - 1 колонка на телефонах */
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .stat {
+                padding: 18px 10px;
+            }
+            
+            .stat h3 {
+                font-size: 0.9em;
+            }
+            
+            .stat .value {
+                font-size: 1.5em;
+            }
+            
+            /* Прогресс бары */
+            .main-progress {
+                padding: 18px;
+                margin: 25px 0;
+            }
+            
+            .secondary-progress {
+                display: none; /* Скрываем на мобильных */
+            }
+            
+            .progress-label {
+                font-size: 1.2em;
+                margin-bottom: 12px;
+            }
+            
+            .progress-bar {
+                height: 35px;
+            }
+            
+            .progress-text {
+                font-size: 1.2em;
+            }
+        }
+        
+        /* Для очень маленьких экранов (iPhone SE и подобные) */
+        @media (max-width: 375px) {
+            h1 {
+                font-size: 1.6em;
+            }
+            
+            .container {
+                padding: 15px 10px;
+            }
+            
+            .stat .value {
+                font-size: 1.3em;
+            }
+            
+            .progress-bar {
+                height: 30px;
+            }
+            
+            .progress-text {
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<script>
+// Проверка авторизации при загрузке
+if (!localStorage.getItem('user_id') || localStorage.getItem('user_role') !== 'admin') {
+    window.location.href = 'index.html';
+}
+</script>
+
+<!-- Кнопка выхода -->
+<button onclick="logout()" style="position:fixed; top:20px; right:20px; padding:10px 20px; border-radius:12px; border:none; background:linear-gradient(90deg, #ff7b72, #ff9999); color:white; font-weight:bold; cursor:pointer; z-index:10000;">Выход</button>
+
+<div id="loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text" id="loaderText">Запрашиваю данные...</div>
+</div>
+
+<div class="container">
+    <h1> Депозит и Cложный процент</h1>
+    <div class="header">
+        <button class="refresh-btn" onclick="loadData()" id="refreshBtn">Обновить</button>
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <div class="main-progress">
+        <div class="progress-label">До цели</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="totalFill"></div>
+            <div class="progress-text" id="totalText">0%</div>
+        </div>
+    </div>
+
+    <!-- Второй прогресс-бар (только для десктопа) -->
+    <div class="secondary-progress">
+        <div class="progress-label">Текущий уровень</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="levelFill"></div>
+            <div class="progress-text" id="levelText">0%</div>
+        </div>
+    </div>
+
+    <!-- Таблица (только для десктопа) -->
+    <div class="table-wrapper">
+        <table id="levelsTable">
+            <thead><tr>
+                <th>LVL</th>
+                <th>Депо</th>
+                <th>Цель</th>
+                <th>Текущий статус</th>
+                <th>Current LVL Profit</th>
+                <th>Achieved</th>
+                <th>Дата</th>
+            </tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Функция выхода
+    function logout() {
+        localStorage.clear();
+        window.location.href = 'index.html';
+    }
+
+    // Проверка авторизации при загрузке
+    if (!localStorage.getItem('user_id') || localStorage.getItem('user_role') !== 'admin') {
+        window.location.href = 'index.html';
+    }
+
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTGolX0bo1z7rTJGbSN7TjPpWtUtS-lB35107OB71d5nULSaNbo-9imyWutPdbUuhxpxtRhthfHB1Q9/pub?gid=266237619&single=true&output=csv';
+    const proxy = 'https://corsproxy.io/?';
+    const url = proxy + encodeURIComponent(csvUrl);
+
+    function setLoader(text, active = true) {
+        document.getElementById('loaderText').textContent = text;
+        document.getElementById('loader').classList.toggle('active', active);
+    }
+
+    function loadData() {
+        const btn = document.getElementById('refreshBtn');
+        btn.disabled = true;
+        setLoader('Запрашиваю данные...', true);
+
+        fetch(url)
+            .then(r => { 
+                setLoader('Получаю ответ...'); 
+                if (!r.ok) throw new Error('Network error'); 
+                return r.text(); 
+            })
+            .then(text => { 
+                setLoader('Обрабатываю данные...'); 
+                return new Promise(res => setTimeout(() => res(text), 300)); 
+            })
+            .then(text => {
+                const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+                const rows = parsed.data;
+
+                const dataRow = rows[3];
+                const parse = s => parseFloat((s||'').toString().replace(/[^0-9,]/g,'').replace(',','.')) || 0;
+
+                const currentDep = parse(dataRow[2]);
+                const neededProfit = parse(dataRow[3]);
+                const nextGoal = parse(dataRow[4]);
+                const totalGoal = parse(dataRow[5]);
+
+                // Общий прогресс до цели
+                const totalPercent = totalGoal > 0 ? (currentDep / totalGoal) * 100 : 0;
+                
+                // Прогресс текущего уровня - процент выполнения между текущим депозитом и следующей целью
+                // Если текущий депозит уже достиг или превысил следующую цель, показываем 100%
+                let levelPercent = 0;
+                if (nextGoal > 0) {
+                    levelPercent = currentDep >= nextGoal ? 100 : (currentDep / nextGoal) * 100;
+                }
+                
+                const format = n => '$' + n.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                document.getElementById('stats').innerHTML = `
+                    <div class="stat"><h3>Тек. депозит</h3><div class="value">${format(currentDep)}</div></div>
+                    <div class="stat"><h3>Требуемая прибыль</h3><div class="value">${format(neededProfit)}</div></div>
+                    <div class="stat"><h3>Следующая цель</h3><div class="value">${format(nextGoal)}</div></div>
+                    <div class="stat"><h3>Общая цель</h3><div class="value">${format(totalGoal)}</div></div>
+                `;
+
+                // Обновляем главный прогресс-бар
+                const totalFillPercent = Math.min(totalPercent, 100);
+                document.getElementById('totalFill').style.width = totalFillPercent + '%';
+                document.getElementById('totalText').textContent = totalPercent.toFixed(1) + '%';
+                
+                // Обновляем прогресс уровня
+                document.getElementById('levelFill').style.width = levelPercent + '%';
+                document.getElementById('levelText').textContent = levelPercent.toFixed(1) + '%';
+
+                // Заполняем таблицу
+                const tbody = document.querySelector('#levelsTable tbody');
+                tbody.innerHTML = '';
+                for (let i = 7; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || r.length < 7) continue;
+                    const achieved = r[5] === 'Да' ? '<span style="color:#00ff9d;font-weight:bold">Да</span>' : '';
+                    tbody.innerHTML += `<tr>
+                        <td>${r[0]||''}</td>
+                        <td>${r[1]||''}</td>
+                        <td>${r[2]||''}</td>
+                        <td><strong>${r[3]||''}</strong></td>
+                        <td>${r[4]||''}</td>
+                        <td>${achieved}</td>
+                        <td>${r[6]||''}</td>
+                    </tr>`;
+                }
+
+                setLoader('Готово!', false);
+                btn.disabled = false;
+            })
+            .catch(err => {
+                console.error(err);
+                setLoader('Ошибка загрузки. Попробуй ещё раз.', false);
+                btn.disabled = false;
+            });
+    }
+
+    // Загружаем данные при старте
+    loadData();
+    
+    // Автообновление каждые 5 минут
+    setInterval(() => {
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (!refreshBtn.disabled) {
+            loadData();
+        }
+    }, 300000);
+</script>
+</body>
+</html>
