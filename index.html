@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project ASPAN — Вход и Регистрация</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --accent2: #ffa657;
+            --green: #56d364;
+            --red: #ff7b72;
+            --border: #30363d;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            animation: fadeIn 0.8s ease-out;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 3em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00f5ff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--accent2);
+            opacity: 0.9;
+        }
+        .auth-box {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 40px 35px;
+            border: 2px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 5px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: transparent;
+            color: var(--text);
+        }
+        .tab.active {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(88,166,255,0.3);
+        }
+        .form-container {
+            position: relative;
+            min-height: 500px;
+        }
+        .form {
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s ease;
+            pointer-events: none;
+        }
+        .form.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
+        .input-group {
+            margin-bottom: 25px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(88,166,255,0.1);
+        }
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(90deg, var(--accent), #79c0ff);
+            color: #000;
+            font-weight: bold;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(88,166,255,0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .message {
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+        .success {
+            background: rgba(86,211,100,0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+        .error {
+            background: rgba(255,123,114,0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(88,166,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Анимация печатания */
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--accent2) }
+        }
+
+        .typing-animation {
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 3px solid var(--accent2);
+            width: 0;
+            animation:
+                typing 3.5s steps(60, end) forwards,
+                blink-caret .75s step-end infinite;
+            animation-delay: 0.5s;
+        }
+
+        /* Убедимся, что текст не переносится */
+        #typing-subtitle {
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        /* Анимация печатания по буквам */
+        .typing-cursor {
+            color: var(--accent2);
+            font-weight: bold;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        @media (max-width: 480px) {
+            .container { padding: 0; }
+            .auth-box { padding: 30px 25px; }
+            h1 { font-size: 2.4em; }
+            .subtitle { font-size: 1.1em; }
+            .btn { padding: 16px; font-size: 1.1em; }
+        }
+
+        @media (max-width: 768px) {
+            .typing-animation {
+                animation:
+                    typing 2.5s steps(40, end) forwards,
+                    blink-caret .75s step-end infinite;
+                animation-delay: 0.5s;
+                white-space: normal; /* Разрешаем перенос на мобильных */
+                border-right: none; /* Убираем курсор на мобильных */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Project ASPAN</h1>
+            <div class="subtitle" id="typing-subtitle">Автоматизированная система поиска арбитражных неэффективностей</div>
+        </div>
+
+        <div class="auth-box">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Вход</button>
+                <button class="tab" onclick="switchTab('register')">Регистрация</button>
+            </div>
+
+            <div class="form-container">
+                <!-- Форма входа -->
+                <div class="form active" id="login-form">
+                    <div class="input-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password">Пароль</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn" onclick="login()">Войти в систему</button>
+                </div>
+
+                <!-- Форма регистрации -->
+                <div class="form" id="register-form">
+                    <div class="input-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-username">Имя пользователя</label>
+                        <input type="text" id="reg-username" placeholder="Username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-password">Пароль</label>
+                        <input type="password" id="reg-password" placeholder="••••••••" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-password-confirm">Подтвердите пароль</label>
+                        <input type="password" id="reg-password-confirm" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn" onclick="register()">Создать аккаунт</button>
+                </div>
+            </div>
+
+            <div class="message" id="message"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div style="margin-top: 10px;">Обработка...</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #8b949e; font-size: 0.9em;">
+            © 2026 Project ASPAN
+        </div>
+    </div>
+
+    <script>
+// === ВАШИ ДАННЫЕ SUPABASE ===
+const SUPABASE_URL = 'https://tusekrsokkmjtlkvgyvq.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_-qYVqquSGHd3z53UDHxWGw_Tvq9358W';
+
+// Инициализация клиента - ИСПОЛЬЗУЕМ supabaseClient (как в Chelsea FC)
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentTab = 'login';
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+    document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+    document.getElementById(`${tab}-form`).classList.add('active');
+}
+
+function showMessage(text, type) {
+    const messageEl = document.getElementById('message');
+    messageEl.textContent = text;
+    messageEl.className = `message ${type}`;
+    messageEl.style.display = 'block';
+    setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
+}
+
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
+
+// === ФУНКЦИЯ РЕГИСТРАЦИИ ===
+async function register() {
+    const email = document.getElementById('reg-email').value.trim();
+    const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const confirmPassword = document.getElementById('reg-password-confirm').value;
+
+    // Валидация
+    if (!email || !username || !password || !confirmPassword) {
+        showMessage('Все поля обязательны для заполнения', 'error');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showMessage('Пароли не совпадают', 'error');
+        return;
+    }
+
+    if (password.length < 4) {
+        showMessage('Пароль должен содержать минимум 4 символа', 'error');
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // Рассчитываем следующую дату выплаты (через 30 дней)
+        const nextPaymentDate = new Date();
+        nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
+        const formattedDate = nextPaymentDate.toISOString().split('T')[0];
+
+        // Отправляем данные в Supabase
+        const { data, error } = await supabaseClient
+            .from('users')
+            .insert([
+                {
+                    email: email,
+                    password: password, // Сохраняем пароль как есть
+                    username: username,
+                    registration_date: new Date().toISOString(),
+                    next_payment_date: formattedDate,
+                    total_investment: 0,
+                    wallet_address: '',
+                    status: 'active',
+                    role: 'user'
+                }
+            ])
+            .select(); // Возвращает созданную запись
+
+        if (error) throw error;
+
+        showMessage('Регистрация успешна! Перенаправляем...', 'success');
+
+        // Сохраняем данные пользователя
+        localStorage.setItem('user_id', data[0].id);
+        localStorage.setItem('user_email', email);
+        localStorage.setItem('username', username);
+        localStorage.setItem('user_role', 'user');
+        localStorage.setItem('user_data', JSON.stringify(data[0]));
+
+        // Перенаправляем в личный кабинет через 1.5 секунды
+        setTimeout(() => {
+            window.location.href = 'account.html';
+        }, 1500);
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        if (error.message.includes('duplicate') || error.code === '23505') {
+            showMessage('Пользователь с таким email уже существует', 'error');
+        } else {
+            showMessage('Ошибка при регистрации. Попробуйте позже', 'error');
+        }
+    } finally {
+        showLoading(false);
+    }
+}
+
+// === ФУНКЦИЯ ВХОДА ===
+async function login() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
+    if (!email || !password) {
+        showMessage('Заполните все поля', 'error');
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // Ищем пользователя по email
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle(); // Возвращает одну запись или null
+
+        if (error) throw error;
+
+        if (!data) {
+            showMessage('Пользователь не найден', 'error');
+            return;
+        }
+
+        // ПРОСТАЯ ПРОВЕРКА ПАРОЛЯ (без хеширования)
+        if (password !== data.password) {
+            showMessage('Неверный пароль', 'error');
+            return;
+        }
+
+        // Сохраняем данные пользователя
+        localStorage.setItem('user_id', data.id);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('user_role', data.role || 'user');
+        localStorage.setItem('user_data', JSON.stringify(data));
+
+        showMessage('Успешный вход! Перенаправляем...', 'success');
+
+        // Перенаправляем в зависимости от роли
+        setTimeout(() => {
+            if (data.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'account.html';
+            }
+        }, 1500);
+
+    } catch (error) {
+        console.error('Login error:', error);
+        showMessage('Ошибка при входе. Проверьте интернет соединение', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Автовход для тестирования
+document.addEventListener('DOMContentLoaded', function() {
+    // Если пользователь уже авторизован, перенаправляем
+    const userId = localStorage.getItem('user_id');
+    const userRole = localStorage.getItem('user_role');
+
+    if (userId) {
+        if (userRole === 'admin') {
+            window.location.href = 'admin.html';
+        } else {
+            window.location.href = 'account.html';
+        }
+    }
+});
+
+// Более продвинутая анимация печатания (по буквам)
+function startLetterByLetterAnimation() {
+    const subtitle = document.getElementById('typing-subtitle');
+    if (!subtitle) return;
+    
+    const text = subtitle.textContent;
+    subtitle.textContent = '';
+    
+    // Создаем контейнер для анимированного текста
+    const container = document.createElement('span');
+    container.className = 'typing-container';
+    subtitle.appendChild(container);
+    
+    // Создаем курсор
+    const cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    cursor.innerHTML = '|';
+    subtitle.appendChild(cursor);
+    
+    // Анимируем появление каждой буквы
+    let i = 0;
+    function typeLetter() {
+        if (i < text.length) {
+            container.textContent += text.charAt(i);
+            i++;
+            setTimeout(typeLetter, 50); // Скорость печатания (50мс на букву)
+        } else {
+            // Когда текст напечатан, убираем курсор
+            setTimeout(() => {
+                cursor.style.opacity = '0';
+            }, 1000);
+        }
+    }
+    
+    // Начинаем анимацию
+    setTimeout(typeLetter, 500);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(startLetterByLetterAnimation, 800);
+});
+    </script>
+
+</body>
+</html>
+
